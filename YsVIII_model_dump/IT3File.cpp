@@ -1,14 +1,18 @@
 #include "IT3File.h"
-#include "utilities.h"
 #include <memory>
 #include <string>
 
-std::shared_ptr<data> interpret_data(const std::vector<uint8_t> &content, uint32_t identifier){
+std::shared_ptr<data> interpret_data(const std::vector<uint8_t> &content, uint32_t identifier, unsigned int &addr, size_t sz){
 
 	switch (identifier) {
-	case 0x4F464E49: //INFO
-		return std::make_shared<INFO>();
+	case INFO_ID: //INFO
+		return std::make_shared<INFO>(content, addr, sz);
+	case RTY2_ID: //INFO
+		return std::make_shared<RTY2>(content, addr, sz);
+	case LIG3_ID: //INFO
+		return std::make_shared<LIG3>(content, addr, sz);
 	default: 
+		addr += sz;
 		std::cout << "skipped chunk because data type not yet reversed: " << id_to_ascii(identifier) << std::endl;
 		return NULL;
 	}
@@ -17,8 +21,7 @@ std::shared_ptr<data> interpret_data(const std::vector<uint8_t> &content, uint32
 Chunk::Chunk(const std::vector<uint8_t> &file_content, unsigned int &addr) {
 	this->FourCC = read_data<unsigned int>(file_content, addr);
 	this->size = read_data<unsigned int>(file_content, addr);
-	this->data = interpret_data(file_content, this->FourCC);
-	addr += size;
+	this->data = interpret_data(file_content, this->FourCC, addr, this->size);
 }
 
 

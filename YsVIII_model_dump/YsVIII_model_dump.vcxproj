@@ -156,6 +156,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="IT3File.cpp" />
+    <ClCompile Include="utilities.cpp" />
     <ClCompile Include="YsVIII_model_dump.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
