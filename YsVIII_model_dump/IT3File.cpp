@@ -11,6 +11,8 @@ std::shared_ptr<data> interpret_data(const std::vector<uint8_t> &content, uint32
 		return std::make_shared<RTY2>(content, addr, sz);
 	case LIG3_ID: //INFO
 		return std::make_shared<LIG3>(content, addr, sz);
+	case INFZ_ID: //INFO
+		return std::make_shared<INFZ>(content, addr, sz);
 	default: 
 		addr += sz;
 		std::cout << "skipped chunk because data type not yet reversed: " << id_to_ascii(identifier) << std::endl;

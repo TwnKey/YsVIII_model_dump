@@ -8,7 +8,8 @@
 enum identifier {
 	INFO_ID = 0x4F464E49,
 	RTY2_ID = 0x32595452,
-	LIG3_ID = 0x3347494C
+	LIG3_ID = 0x3347494C,
+	INFZ_ID = 0x5A464E49
 };
 
 
@@ -87,7 +88,22 @@ public:
 	}
 
 };
-/*class INFZ : public data {};
+class INFZ : public data {
+public:
+	INFZ() = default;
+
+	vector4<int> v0;
+
+	INFZ(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t size) {
+		v0 = read_data<vector4<int>>(file_content, addr);
+	}
+
+
+	void output_data() {
+		std::cout << v0.x << ", " << v0.y << ", " << v0.z << ", " << v0.t << std::endl;
+	}
+};
+/*
 class BBOX : public data {}; //Bounding Box ?
 class CHID : public data {};
 class JNTV : public data {}; //Joints ?
