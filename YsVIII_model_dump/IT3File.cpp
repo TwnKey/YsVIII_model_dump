@@ -3,16 +3,31 @@
 #include <string>
 
 std::shared_ptr<data> interpret_data(const std::vector<uint8_t> &content, uint32_t identifier, unsigned int &addr, size_t sz){
-
+	std::cout << "Processing chunk: " << id_to_ascii(identifier) << " at " << std::hex << addr << std::endl;
 	switch (identifier) {
-	case INFO_ID: //INFO
+	case INFO_ID: 
 		return std::make_shared<INFO>(content, addr, sz);
-	case RTY2_ID: //INFO
+	case RTY2_ID: 
 		return std::make_shared<RTY2>(content, addr, sz);
-	case LIG3_ID: //INFO
+	case LIG3_ID: 
 		return std::make_shared<LIG3>(content, addr, sz);
-	case INFZ_ID: //INFO
+	case INFZ_ID: 
 		return std::make_shared<INFZ>(content, addr, sz);
+	case BBOX_ID: 
+		return std::make_shared<BBOX>(content, addr, sz);
+	case CHID_ID:
+		return std::make_shared<CHID>(content, addr, sz);
+	case JNTV_ID:
+		return std::make_shared<JNTV>(content, addr, sz);
+	case MAT6_ID:
+		return std::make_shared<MAT6>(content, addr, sz);
+	case BON3_ID:
+		return std::make_shared<BON3>(content, addr, sz);
+	case TEXI_ID:
+		return std::make_shared<TEXI>(content, addr, sz);
+	case ITP_ID:
+		addr -= 8; //removing the "size" and identifier, since in the case of pure ITP files, there is no size after the four cc
+		return std::make_shared<ITP>(content, addr);
 	default: 
 		addr += sz;
 		std::cout << "skipped chunk because data type not yet reversed: " << id_to_ascii(identifier) << std::endl;
