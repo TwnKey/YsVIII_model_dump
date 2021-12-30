@@ -1,6 +1,7 @@
 #include "IT3File.h"
 #include <memory>
 #include <string>
+#include "DataBlock.h"
 
 std::shared_ptr<data> interpret_data(const std::vector<uint8_t> &content, uint32_t identifier, unsigned int &addr, size_t sz){
 	std::cout << "Processing chunk: " << id_to_ascii(identifier) << " at " << std::hex << addr << std::endl;
@@ -27,7 +28,7 @@ std::shared_ptr<data> interpret_data(const std::vector<uint8_t> &content, uint32
 		return std::make_shared<TEXI>(content, addr, sz);
 	case ITP_ID:
 		addr -= 8; //removing the "size" and identifier, since in the case of pure ITP files, there is no size after the four cc
-		return std::make_shared<ITP>(content, addr);
+		return std::make_shared<ITP>(content, addr,"test");
 	default: 
 		addr += sz;
 		std::cout << "skipped chunk because data type not yet reversed: " << id_to_ascii(identifier) << std::endl;
@@ -36,9 +37,11 @@ std::shared_ptr<data> interpret_data(const std::vector<uint8_t> &content, uint32
 }
 
 Chunk::Chunk(const std::vector<uint8_t> &file_content, unsigned int &addr) {
+	this->addr = addr;
 	this->FourCC = read_data<unsigned int>(file_content, addr);
 	this->size = read_data<unsigned int>(file_content, addr);
 	this->data = interpret_data(file_content, this->FourCC, addr, this->size);
+	
 }
 
 
@@ -64,6 +67,13 @@ std::string IT3File::to_string() {
 	return str;
 }
 
+void IT3File::output_data() {
+	for (auto chunk : this->chunks) {
+		std::cout << id_to_ascii(chunk.FourCC) << " addr: " << std::hex << chunk.addr << std::endl;
+		if (chunk.data != NULL)
+			chunk.data->output_data();
+	}
+}
 
 IT3File::~IT3File()
 {

@@ -151,10 +151,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="DataBlock.h" />
     <ClInclude Include="IT3File.h" />
     <ClInclude Include="utilities.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="DataBlock.cpp" />
     <ClCompile Include="IT3File.cpp" />
     <ClCompile Include="utilities.cpp" />
     <ClCompile Include="YsVIII_model_dump.cpp" />

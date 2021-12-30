@@ -27,3 +27,4 @@ T read_data(const std::vector<uint8_t> &file_content, unsigned int &addr) {
 std::string read_string(const std::vector<uint8_t> &file_content, unsigned int &addr);
 
 std::string id_to_ascii(unsigned int identifier_uint);
+std::vector<uint8_t> int_to_bytes(int x);
