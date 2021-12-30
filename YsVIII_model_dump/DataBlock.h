@@ -18,7 +18,9 @@ enum identifier {
 	IALP_ID = 0x504c4149,
 	IMIP_ID = 0x50494d49,
 	IDAT_ID = 0x54414449,
-	IEND_ID = 0x444E4549
+	IEND_ID = 0x444E4549,
+	VPAX_ID = 0x58415056,
+	VPAC_ID = 0x43415056
 };
 
 
@@ -211,6 +213,49 @@ public:
 	ITP itp;
 
 	TEXI(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t size);
+
+
+	void output_data();
+
+};
+
+struct header_VPAC {
+	unsigned int FourCC;
+	unsigned int version;
+	vector4<float> v0, v1, v2;
+	unsigned int uint0[0x4D];
+};
+
+struct vertex {
+	//I'm not sure all models have vertexes of size 0xA0 since it is not hardcoded, so for now I'll stay with 0xA0 and change when it crashes
+	vector4<float> position;
+	vector4<float> no_idea;
+	vector4<float> no_idea1;
+	vector4<float> no_idea2;
+	vector2<float> no_idea3;
+	unsigned int no_idea4;
+	unsigned int no_idea5;
+	vector4<float> no_idea6;
+	vector4<float> no_idea7;
+	vector4<float> no_idea8;
+	vector4<float> no_idea9;
+	unsigned int no_idea10;
+	unsigned int no_idea11;
+	unsigned int no_idea12;
+	unsigned int no_idea13;
+
+};
+
+class VPAX : public data {
+public:
+	VPAX() = default;
+	std::vector<uint8_t> content_vertices, content_indexes;
+	header_VPAC header;
+	std::vector<uint8_t> first_part;
+	std::vector<vertex> vertices;
+	std::vector<uint16_t> indexes;
+
+	VPAX(const std::vector<uint8_t> &file_content, unsigned int &addr);
 
 
 	void output_data();

@@ -29,6 +29,8 @@ std::shared_ptr<data> interpret_data(const std::vector<uint8_t> &content, uint32
 	case ITP_ID:
 		addr -= 8; //removing the "size" and identifier, since in the case of pure ITP files, there is no size after the four cc
 		return std::make_shared<ITP>(content, addr,"test");
+	case VPAX_ID:
+		return std::make_shared<VPAX>(content, addr);
 	default: 
 		addr += sz;
 		std::cout << "skipped chunk because data type not yet reversed: " << id_to_ascii(identifier) << std::endl;
