@@ -24,6 +24,9 @@
     <ClInclude Include="DataBlock.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="FBXExporter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="YsVIII_model_dump.cpp">
@@ -36,6 +39,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="DataBlock.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="FBXExporter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

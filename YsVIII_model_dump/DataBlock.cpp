@@ -2,6 +2,7 @@
 #include "utilities.h"
 #include <fstream>
 #include <iostream>
+#include "FBXExporter.h"
 //I should name it something else because I actually don't know what that is
 size_t get_bpp(size_t id) {
 switch (id) {
@@ -325,6 +326,10 @@ ITP::ITP(const std::vector<uint8_t> &file_content, unsigned int &addr, std::stri
 
 
 				break; }
+			case IHAS_ID: {
+				ihas = read_data<IHAS>(file_content, addr);
+				break;
+			}
 			case IEND_ID: {
 				keep_reading = false;
 				break;
@@ -454,7 +459,25 @@ void TEXI::output_data() {
 	itp.output_data();
 }
 
-VPAX::VPAX(const std::vector<uint8_t> &file_content, unsigned int &addr) {
+
+
+TEX2::TEX2(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t size) {
+
+	unsigned int uint0 = read_data<unsigned int>(file_content, addr);
+	name = read_string(file_content, addr);
+	itp = ITP(file_content, addr, name);
+
+}
+
+
+void TEX2::output_data() {
+
+	itp.output_data();
+}
+
+VPAX::VPAX(const std::vector<uint8_t> &file_content, unsigned int &addr, std::string name) {
+
+	this->name = name;
 
 	size_t count = read_data<size_t>(file_content, addr);
 	//I think that's the vertices
@@ -527,8 +550,8 @@ VPAX::VPAX(const std::vector<uint8_t> &file_content, unsigned int &addr) {
 		size_t count1 = local_c;
 		size_t count2 = header.uint0[0];
 
-		size_t block_size = iVar4;
-		size_t nb_blocks = header.uint0[0];
+		block_size = iVar4;
+		nb_blocks = header.uint0[0];
 		
 		size_t first_part_sz = block_size * nb_blocks; //taille total de la partie des vertices, je pense
 		//le mesh est parsé là: 0x6b2432
@@ -563,10 +586,13 @@ VPAX::VPAX(const std::vector<uint8_t> &file_content, unsigned int &addr) {
 
 void VPAX::output_data() {
 	std::ofstream OutFile;
-	OutFile.open("VPAX_vertices", std::ios::out | std::ios::binary);
+	std::cout << "Vertex size: " << std::hex << block_size << " Nb blocks: " << nb_blocks << std::endl;
+	OutFile.open(name + "_vertices", std::ios::out | std::ios::binary);
 	OutFile.write((char*)this->content_vertices.data(), this->content_vertices.size() * sizeof(char));
 	OutFile.close();
-	OutFile.open("VPAX_indexes", std::ios::out | std::ios::binary);
+	OutFile.open(name + "_indexes", std::ios::out | std::ios::binary);
 	OutFile.write((char*)this->content_indexes.data(), this->content_indexes.size() * sizeof(char));
 	OutFile.close();
+	FBXExporter exporter;
+	exporter.GenerateScene(*this);
 }

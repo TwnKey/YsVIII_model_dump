@@ -4,4 +4,8 @@
     <LocalDebuggerCommandArguments>"A:\Games\Ys VIII Lacrimosa of Dana\chr\pc\c000.it3"</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LocalDebuggerCommandArguments>"A:\Games\Ys VIII Lacrimosa of Dana\chr\pc\c000.it3"</LocalDebuggerCommandArguments>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+  </PropertyGroup>
 </Project>

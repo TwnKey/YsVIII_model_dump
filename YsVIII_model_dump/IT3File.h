@@ -4,27 +4,36 @@
 #include <memory>
 #include <iostream>
 #include <fstream>
+#include "DataBlock.h"
 
 
-class data {
+
+class item {
 public:
-	data() {};
-	virtual ~data() = default;
-	virtual void output_data() = 0;
-	uint32_t id;
-};
+	unsigned int addr = 0;
 
+	INFO * info = NULL;
+	RTY2 * rty2 = NULL;
+	LIG3 * lig3 = NULL;
+	INFZ * infz = NULL;
+	BBOX * bbox = NULL;
+	CHID * chid = NULL;
+	JNTV * jntv = NULL;
+	MAT6 * mat6 = NULL;
+	BON3 * bon3 = NULL;
+	TEXI * texi = NULL;
+	TEX2 * tex2 = NULL;
+	ITP  * itp = NULL;
+	VPAX * vpax = NULL;
 
-class Chunk {
+	item() = default;
+	item(unsigned int addr) :addr(addr) {}
 
+	void output_data();
 
-	public:
-	uint32_t FourCC;
-	size_t size;
-	std::shared_ptr<data> data;
-	unsigned int addr;
+	std::string to_string();
 
-	Chunk(const std::vector<uint8_t> &file_content, unsigned int &addr);
+	
 };
 
 
@@ -33,7 +42,7 @@ class IT3File
 public:
 	IT3File(const std::vector<uint8_t> &file_content);
 	~IT3File();
-	std::vector<Chunk> chunks;
+	std::vector<item> items;
 	std::string to_string();
 	void output_data();
 };

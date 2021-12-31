@@ -1,7 +1,6 @@
 #pragma once
 #include <vector>
 #include "utilities.h"
-#include "IT3File.h"
 enum identifier {
 	INFO_ID = 0x4F464E49,
 	RTY2_ID = 0x32595452,
@@ -20,10 +19,19 @@ enum identifier {
 	IDAT_ID = 0x54414449,
 	IEND_ID = 0x444E4549,
 	VPAX_ID = 0x58415056,
-	VPAC_ID = 0x43415056
+	VPAC_ID = 0x43415056,
+	TEX2_ID = 0x32584554,
+	IHAS_ID = 0x53414849
+
 };
 
-
+class data {
+public:
+	data() {};
+	virtual ~data() = default;
+	virtual void output_data() = 0;
+	uint32_t id;
+};
 struct BlockDesc {
 	unsigned int flags;
 	vector4<int> v0; 
@@ -186,7 +194,10 @@ struct IALP {
 struct IMIP {
 	vector3<int> v0;
 };
-
+struct IHAS {
+	vector2<int> v0;
+	vector2<float> v1;
+};
 
 
 class ITP : public data {
@@ -196,6 +207,7 @@ public:
 	IHDR hdr;
 	IALP alp;
 	IMIP mip;
+	IHAS ihas;
 	std::vector<uint8_t> content;
 
 	ITP(const std::vector<uint8_t> &file_content, unsigned int &addr, std::string name);
@@ -213,6 +225,20 @@ public:
 	ITP itp;
 
 	TEXI(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t size);
+
+
+	void output_data();
+
+};
+
+class TEX2 : public data {
+public:
+	TEX2() = default;
+
+	std::string name;
+	ITP itp;
+
+	TEX2(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t size);
 
 
 	void output_data();
@@ -249,13 +275,18 @@ struct vertex {
 class VPAX : public data {
 public:
 	VPAX() = default;
+
+	std::string name;
 	std::vector<uint8_t> content_vertices, content_indexes;
 	header_VPAC header;
 	std::vector<uint8_t> first_part;
 	std::vector<vertex> vertices;
 	std::vector<uint16_t> indexes;
 
-	VPAX(const std::vector<uint8_t> &file_content, unsigned int &addr);
+	size_t block_size;
+	size_t nb_blocks;
+
+	VPAX(const std::vector<uint8_t> &file_content, unsigned int &addr, std::string name);
 
 
 	void output_data();

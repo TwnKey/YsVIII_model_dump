@@ -7,6 +7,7 @@
 #include <vector>
 #include "IT3File.h"
 #include <string>
+#include "FBXExporter.h"
 int main(int argc, char ** argv)
 {
 	if (argc == 2) {
@@ -16,6 +17,7 @@ int main(int argc, char ** argv)
 		IT3File it3(buffer);
 		std::cout << it3.to_string() << std::endl;
 		it3.output_data();
+		FBXExporter Exporter;
 	}
 	
 
