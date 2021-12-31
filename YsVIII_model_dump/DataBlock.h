@@ -21,8 +21,8 @@ enum identifier {
 	VPAX_ID = 0x58415056,
 	VPAC_ID = 0x43415056,
 	TEX2_ID = 0x32584554,
-	IHAS_ID = 0x53414849
-
+	IHAS_ID = 0x53414849,
+	VP11_ID = 0x31315056,
 };
 
 class data {
@@ -271,22 +271,25 @@ struct vertex {
 	unsigned int no_idea13;
 
 };
-
+struct mesh_data {
+	header_VPAC header;
+	std::vector<uint8_t> first_part;
+	std::vector<vertex> vertices;
+	std::vector<unsigned int>indexes;
+	size_t block_size;
+	size_t nb_blocks;
+};
 class VPAX : public data {
 public:
 	VPAX() = default;
 
 	std::string name;
-	std::vector<uint8_t> content_vertices, content_indexes;
-	header_VPAC header;
-	std::vector<uint8_t> first_part;
-	std::vector<vertex> vertices;
-	std::vector<uint16_t> indexes;
+	std::vector<std::vector<uint8_t>> content_vertices, content_indexes;
+	
+	
+	std::vector<mesh_data> meshes_d;
 
-	size_t block_size;
-	size_t nb_blocks;
-
-	VPAX(const std::vector<uint8_t> &file_content, unsigned int &addr, std::string name);
+	VPAX(const std::vector<uint8_t> &file_content, unsigned int &addr, std::string name, int game_version);
 
 
 	void output_data();

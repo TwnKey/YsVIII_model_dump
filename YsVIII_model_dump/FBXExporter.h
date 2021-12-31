@@ -1,11 +1,11 @@
 #pragma once
-#include "DataBlock.h"
+#include "IT3File.h"
 
 class FBXExporter
 {
 public:
 	FBXExporter();
 	~FBXExporter();
-	void GenerateScene(VPAX vpax);
+	void GenerateScene(IT3File file);
 };
 

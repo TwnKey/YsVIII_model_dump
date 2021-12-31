@@ -84,8 +84,8 @@ BlockDesc mat = read_data<BlockDesc>(file_content, addr);
 //if type == 8, second method has to be applied
 
 for (size_t idx = 0; idx < mat.v0.x; idx++) {
-	size_t count = read_data<size_t>(file_content, addr);
-	size_t size_0 = read_data<size_t>(file_content, addr);
+	size_t count = read_data<uint32_t>(file_content, addr);
+	size_t size_0 = read_data<uint32_t>(file_content, addr);
 	unsigned int type = read_data<unsigned int>(file_content, addr);
 	
 
@@ -220,7 +220,7 @@ void JNTV::output_data() {
 //0x6d1165
 MAT6::MAT6(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t size) {
 
-	count = read_data<size_t>(file_content, addr);
+	count = read_data<uint32_t>(file_content, addr);
 
 	for (unsigned int idx = 0; idx < count; idx++) {
 		int0s.push_back(read_data<int>(file_content, addr));
@@ -475,48 +475,48 @@ void TEX2::output_data() {
 	itp.output_data();
 }
 
-VPAX::VPAX(const std::vector<uint8_t> &file_content, unsigned int &addr, std::string name) {
+VPAX::VPAX(const std::vector<uint8_t> &file_content, unsigned int &addr, std::string name, int game_version) {
 
 	this->name = name;
 
-	size_t count = read_data<size_t>(file_content, addr);
+	size_t count = read_data<uint32_t>(file_content, addr);
+
+	this->content_indexes.resize(count);
+	this->content_vertices.resize(count);
 	//I think that's the vertices
 	for (unsigned int idx = 0; idx < count; idx++) {
-		size_t sz = read_data<size_t>(file_content, addr); //Idk what that is yet.
+		size_t sz = read_data<uint32_t>(file_content, addr); //Idk what that is yet.
 		std::vector<DataBlock> DataBlocks = read_DataBlocks(file_content, addr);
 		for (auto chk : DataBlocks) {
-			content_vertices.insert(content_vertices.end(), chk.content.begin(), chk.content.end());
-
-			/*std::vector<float> floats((chk.content.size() / sizeof(float)) - 1, 0.0f);
-			memcpy(floats.data(), chk.content.data() + 1, floats.size() * sizeof(float));
-			vertices.insert(vertices.end(), floats.begin(), floats.end());*/
+			content_vertices[idx].insert(content_vertices[idx].end(), chk.content.begin(), chk.content.end());
 		}
 			
 	}
 	//and here the indexes
 	for (unsigned int idx = 0; idx < count; idx++) {
-		size_t sz = read_data<size_t>(file_content, addr); 
+		size_t sz = read_data<uint32_t>(file_content, addr);
 		std::vector<DataBlock> DataBlocks = read_DataBlocks(file_content, addr);
 		for (auto chk : DataBlocks) {
-			content_indexes.insert(content_indexes.end(), chk.content.begin(), chk.content.end());
-
-			/*std::vector<unsigned int> uints(chk.content.size() / sizeof(unsigned int), 0.0f);
-			memcpy(uints.data(), chk.content.data(), uints.size() * sizeof(unsigned int));
-			indexes.insert(indexes.end(), indexes.begin(), uints.end());*/
+			content_indexes[idx].insert(content_indexes[idx].end(), chk.content.begin(), chk.content.end());
 		}
 			
 	}
 	//Now to retrieve vertices and indexes
-	unsigned int addr_vpax = 0;
-	header = read_data<header_VPAC>(content_vertices, addr_vpax);
 
-	if (header.FourCC == VPAC_ID) {
-		uint32_t mask = header.uint0[2]; 
-		size_t count = 0x10;
-		uint32_t uVar1 = 1, iVar4 = 0, local_c = 0;
-		do {
-			
-			if ((mask & uVar1) != 0) {
+
+	for (unsigned int nb_mesh = 0; nb_mesh < count; nb_mesh++) {
+		unsigned int addr_vpax = 0;
+
+		mesh_data mesh;
+		mesh.header = read_data<header_VPAC>(content_vertices[nb_mesh], addr_vpax);
+
+		if (mesh.header.FourCC == VPAC_ID) {
+			uint32_t mask = mesh.header.uint0[2];
+			size_t count = 0x10;
+			uint32_t uVar1 = 1, iVar4 = 0, local_c = 0;
+			do {
+
+				if ((mask & uVar1) != 0) {
 					switch (uVar1) {
 					case 1:
 					case 2:
@@ -540,44 +540,54 @@ VPAX::VPAX(const std::vector<uint8_t> &file_content, unsigned int &addr, std::st
 						iVar4 = iVar4 + 4;
 						local_c++;
 						break;
-					
+
 					}
 				}
-			uVar1 = uVar1 << 1 | (unsigned int)((int)uVar1 < 0);
-			count = count - 1;
-		} while (count != 0);
+				uVar1 = uVar1 << 1 | (unsigned int)((int)uVar1 < 0);
+				count = count - 1;
+			} while (count != 0);
 
-		size_t count1 = local_c;
-		size_t count2 = header.uint0[0];
+			size_t count1 = local_c;
+			size_t count2 = mesh.header.uint0[0];
 
-		block_size = iVar4;
-		nb_blocks = header.uint0[0];
-		
-		size_t first_part_sz = block_size * nb_blocks; //taille total de la partie des vertices, je pense
-		//le mesh est parsé là: 0x6b2432
+			mesh.block_size = iVar4;
+			mesh.nb_blocks = mesh.header.uint0[0];
 
-		for (unsigned int idx = 0; idx < nb_blocks; idx++) {
-			vertex v = read_data<vertex>(content_vertices, addr_vpax);
-			vertices.push_back(v);
+			size_t first_part_sz = mesh.block_size * mesh.nb_blocks; //taille total de la partie des vertices, je pense
+			//le mesh est parsé là: 0x6b2432
+
+			for (unsigned int idx = 0; idx < mesh.nb_blocks; idx++) {
+				vertex v = read_data<vertex>(content_vertices[nb_mesh], addr_vpax);
+				mesh.vertices.push_back(v);
+			}
+
+			addr_vpax = 0;
+			size_t nb_indexes;
+			if (game_version == 1) {
+				nb_indexes = content_indexes[nb_mesh].size() / sizeof(uint16_t);
+				for (unsigned int idx = 0; idx < nb_indexes; idx++) {
+					unsigned int i = read_data<uint16_t>(content_indexes[nb_mesh], addr_vpax);
+					mesh.indexes.push_back(i);
+				}
+			}
+				
+			else if (game_version == 2) {
+				nb_indexes = content_indexes[nb_mesh].size() / sizeof(uint32_t);
+				for (unsigned int idx = 0; idx < nb_indexes; idx++) {
+					unsigned int i = read_data<uint32_t>(content_indexes[nb_mesh], addr_vpax);
+					mesh.indexes.push_back(i);
+				}
+			}
+				
+
+			
+			this->meshes_d.push_back(mesh);
 		}
-
-		addr_vpax = 0;
-		size_t nb_indexes = content_indexes.size()/sizeof(uint16_t);
-
-		for (unsigned int idx = 0; idx < nb_indexes; idx++) {
-			uint16_t i = read_data<uint16_t>(content_indexes, addr_vpax);
-			indexes.push_back(i);
+		else {
+			throw std::exception("Not sure if it happens but needs to be investigated if it does");
 		}
-
-		/*std::vector<uint8_t> el = std::vector<uint8_t>(first_part_sz);
-		first_part.insert(first_part.end(), content.begin() + addr_vpax, content.begin() + addr_vpax + first_part_sz);
-		addr_vpax = addr_vpax + first_part_sz;*/
-
-
 	}
-	else {
-		throw std::exception("Not sure if it happens but needs to be investigated if it does");
-	}
+	
 
 	
 
@@ -585,14 +595,15 @@ VPAX::VPAX(const std::vector<uint8_t> &file_content, unsigned int &addr, std::st
 
 
 void VPAX::output_data() {
-	std::ofstream OutFile;
-	std::cout << "Vertex size: " << std::hex << block_size << " Nb blocks: " << nb_blocks << std::endl;
-	OutFile.open(name + "_vertices", std::ios::out | std::ios::binary);
-	OutFile.write((char*)this->content_vertices.data(), this->content_vertices.size() * sizeof(char));
-	OutFile.close();
-	OutFile.open(name + "_indexes", std::ios::out | std::ios::binary);
-	OutFile.write((char*)this->content_indexes.data(), this->content_indexes.size() * sizeof(char));
-	OutFile.close();
-	FBXExporter exporter;
-	exporter.GenerateScene(*this);
+	for (unsigned int idx_mesh = 0; idx_mesh < meshes_d.size(); idx_mesh++) {
+		std::ofstream OutFile;
+		std::cout << "Vertex size: " << std::hex << meshes_d[idx_mesh].block_size << " Nb blocks: " << meshes_d[idx_mesh].nb_blocks << std::endl;
+		OutFile.open(name + "_vertices_"+std::to_string(idx_mesh)+".idx", std::ios::out | std::ios::binary);
+		OutFile.write((char*)this->content_vertices[idx_mesh].data(), this->content_vertices[idx_mesh].size() * sizeof(char));
+		OutFile.close();
+		OutFile.open(name + "_indexes_" + std::to_string(idx_mesh) + ".idx", std::ios::out | std::ios::binary);
+		OutFile.write((char*)this->content_indexes[idx_mesh].data(), this->content_indexes[idx_mesh].size() * sizeof(char));
+		OutFile.close();
+	}
+	
 }

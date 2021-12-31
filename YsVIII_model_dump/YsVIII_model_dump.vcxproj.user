@@ -8,4 +8,8 @@
     <LocalDebuggerCommandArguments>"A:\Games\Ys VIII Lacrimosa of Dana\chr\pc\c000.it3"</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LocalDebuggerCommandArguments>"A:\Games\Ys IX - Monstrum Nox\chr\pc\c0011.it3"</LocalDebuggerCommandArguments>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+  </PropertyGroup>
 </Project>

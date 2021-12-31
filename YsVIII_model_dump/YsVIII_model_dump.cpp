@@ -15,9 +15,8 @@ int main(int argc, char ** argv)
 		std::ifstream input(filepath, std::ios::binary);
 		std::vector<unsigned char> buffer(std::istreambuf_iterator<char>(input), {});
 		IT3File it3(buffer);
-		std::cout << it3.to_string() << std::endl;
+		//std::cout << it3.to_string() << std::endl;
 		it3.output_data();
-		FBXExporter Exporter;
 	}
 	
 

@@ -8,7 +8,7 @@
 
 
 
-class item {
+class node {
 public:
 	unsigned int addr = 0;
 
@@ -26,8 +26,8 @@ public:
 	ITP  * itp = NULL;
 	VPAX * vpax = NULL;
 
-	item() = default;
-	item(unsigned int addr) :addr(addr) {}
+	node() = default;
+	node(unsigned int addr) :addr(addr) {}
 
 	void output_data();
 
@@ -42,7 +42,7 @@ class IT3File
 public:
 	IT3File(const std::vector<uint8_t> &file_content);
 	~IT3File();
-	std::vector<item> items;
+	std::vector<node> nodes;
 	std::string to_string();
 	void output_data();
 };
