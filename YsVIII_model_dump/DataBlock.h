@@ -185,14 +185,22 @@ public:
 
 };
 
+struct matrix4 {
+	vector4<float> a, b, c, d;
+};
+struct bone {
+	std::string name;
+	matrix4 offset_matrix;
+	bone(std::string name, matrix4 mat) : name(name), offset_matrix(mat) {}
+};
 class BON3 : public data {
 public:
 	BON3() = default;
 
 	int int0, int1;
 	std::string name;
-
-	std::vector <DataBlock> matm;
+	
+	std::vector<bone> bones;
 
 	BON3(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t size);
 
@@ -272,15 +280,16 @@ struct header_VPAC {
 };
 
 struct vertex {
-	//I'm not sure all models have vertexes of size 0xA0 since it is not hardcoded, so for now I'll stay with 0xA0 and change when it crashes
+	//I'm not sure all models have vertexes of size 0xA0 since it is not hardcoded, so for now I'll stay with 0xA0 and change when it throws an exception
 	vector4<float> position;
 	vector4<float> no_idea;
 	vector4<float> no_idea1;
 	vector4<float> no_idea2;
-	vector2<float> no_idea3;
+	vector2<float> noidea3;
 	unsigned int no_idea4;
 	unsigned int no_idea5;
-	vector4<float> no_idea6;
+	vector2<float> uv;
+	vector2<float> uv2;
 	vector4<float> no_idea7;
 	vector4<float> no_idea8;
 	vector4<float> no_idea9;

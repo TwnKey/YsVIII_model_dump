@@ -19,6 +19,9 @@ void assign_property(aiMaterial& mat_to_update, material mat, unsigned int index
 }
 
 void assign_property_based_on_name(aiMaterial& mat_to_update, material mat) {
+
+	
+
 	for (unsigned int idx_tex = 0; idx_tex < mat.textures.size(); idx_tex++) {
 		//we guess from the texture name...
 		aiString name;
@@ -45,6 +48,16 @@ void assign_property_based_on_name(aiMaterial& mat_to_update, material mat) {
 
 			size_t nb_tex = mat_to_update.GetTextureCount(type);
 			mat_to_update.AddProperty(&name, AI_MATKEY_TEXTURE(type, nb_tex));
+			aiTextureMapping mapping = aiTextureMapping_UV;
+			mat_to_update.AddProperty<int>((int *)&mapping,1, AI_MATKEY_MAPPING(type, nb_tex));
+
+			/*aiTextureMapMode Wrap = aiTextureMapMode_Wrap;
+			mat_to_update.AddProperty<int>((int*)&Wrap, 1, AI_MATKEY_MAPPINGMODE_U(type, nb_tex));
+			mat_to_update.AddProperty<int>((int*)&Wrap, 1, AI_MATKEY_MAPPINGMODE_V(type, nb_tex));*/
+
+			int channel = 0;//They all use the same channel, I believe (same set of coordinates in the vertice part of VPAX)
+			mat_to_update.AddProperty<int>((int*)&channel, 1, AI_MATKEY_UVWSRC(type, nb_tex));
+			
 		}
 
 
@@ -137,6 +150,7 @@ void FBXExporter::GenerateScene(IT3File file){
 			size_t count_mesh_ = 0;
 			for (auto mesh_ : current_node.vpax->meshes_d) {
 				aiVector3D* vertices = new aiVector3D[mesh_.vertices.size()];
+				aiVector3D* uv = new aiVector3D[mesh_.vertices.size()];
 
 				std::cout << "OBJ EXPORT " << std::endl;
 				for (unsigned int idx_v = 0; idx_v < mesh_.vertices.size(); idx_v++)
@@ -144,6 +158,10 @@ void FBXExporter::GenerateScene(IT3File file){
 					vertices[idx_v].x = mesh_.vertices[idx_v].position.x;
 					vertices[idx_v].y = mesh_.vertices[idx_v].position.y;
 					vertices[idx_v].z = mesh_.vertices[idx_v].position.z;
+
+					uv[idx_v].x = abs(mesh_.vertices[idx_v].uv.x);
+					uv[idx_v].y = abs(1-mesh_.vertices[idx_v].uv.y);
+					uv[idx_v].z = 0;
 					//std::cout << vertices[idx_v].x << ", " << vertices[idx_v].y << ", " << vertices[idx_v].z << std::endl;
 				}
 
@@ -179,6 +197,8 @@ void FBXExporter::GenerateScene(IT3File file){
 				if ((node_materials.find(mesh_.material_id) == node_materials.end())) {
 					node_materials[mesh_.material_id] = count_total_material;
 					aiMaterial* material = guess_material_from_mat_struct(current_node.mat6->mats[mesh_.material_id], current_node.rty2->material_variant);
+					
+					
 					mesh->mMaterialIndex = count_total_material;
 					aimaterials[count_total_material] = material;
 					count_total_material++;
@@ -189,8 +209,8 @@ void FBXExporter::GenerateScene(IT3File file){
 				else {
 					mesh->mMaterialIndex = node_materials[mesh_.material_id];
 				}
-
-				
+				mesh->mNumUVComponents[0] = 2;
+				mesh->mTextureCoords[0] = uv;
 					
 				//our material: current_node.mat6->mats[count_mesh_].name;
 				
@@ -259,13 +279,13 @@ void FBXExporter::GenerateScene(IT3File file){
 
 	Assimp::Exporter exporter;
 	//try{
-	/*std::cout << "format supported: " << std::endl;
+	std::cout << "format supported: " << std::endl;
 	for (unsigned i = 0; i < exporter.GetExportFormatCount(); i++) {
 		const aiExportFormatDesc * desc = exporter.GetExportFormatDescription(i);
 		std::cout << desc->description << " " << desc->id << std::endl;
-	}*/
+	}
 	//exporter.Export(out, "objnomtl", "model.obj");
-	exporter.Export(out, "fbx",  "model.fbx");
+	exporter.Export(out, "collada",  "model.dae");
 	//}
 	//catch (std::exception e) {
 		//std::cout << "FAIL: " << e.what() << std::endl;

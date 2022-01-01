@@ -334,15 +334,27 @@ BON3::BON3(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t 
 	name = read_string(file_content, addr);
 	addr = addr_ + 0x40;
 	int int1 = read_data<int>(file_content, addr);
+	std::vector <DataBlock> matm;
 
 	for (unsigned int idx = 0; idx < 3; idx++) {
 		std::vector<DataBlock> chks = read_DataBlocks(file_content, addr);
 		matm.insert(matm.end(), chks.begin(), chks.end());
-		/*mat_struct mat = read_data<mat_struct>(file_content, addr);
-		mats.push_back(mat);
-		matm.push_back(DataBlock(file_content, addr, mat.count - 4,2)); //le 4 est hardcodé*/
-
 	}
+
+	unsigned int addr_bone = 0;
+	unsigned int idx_bone = 0;
+
+	while (addr_bone < matm[2].content.size()) {
+		unsigned int addr_start = addr_bone;
+		std::string name = read_string(matm[1].content, addr_bone);
+		addr_bone = addr_start;
+		matrix4 offset_mat = read_data<matrix4>(matm[2].content, addr_bone);
+		addr_bone = addr_start + 0x40;
+
+		bone b(name, offset_mat);
+		bones.push_back(b);
+	}
+
 
 }
 
@@ -356,6 +368,18 @@ void BON3::output_data(std::string node_name) {
 	text_file << "name: " << name << std::endl;
 
 	text_file.close();
+
+	
+	unsigned int idx = 0;
+	for (auto mat : matm) {
+		std::ofstream OutFile;
+		OutFile.open(node_name + "_" + std::to_string(idx) + ".bones", std::ios::out | std::ios::binary);
+		OutFile.write((char*)mat.content.data(), mat.content.size() * sizeof(char));
+		OutFile.close();
+		idx++;
+	}
+		
+	
 }
 
 
