@@ -25,3 +25,6 @@
 YsVIII_model_dump/x64/Debug/YsVIII_model_dump.vcxproj.FileListAbsolute.txt
 YsVIII_model_dump/x64/Debug/YsVIII_model_dump.exe.recipe
 YsVIII_model_dump/model.fbx
+*.bin
+*.cmd
+*.txt

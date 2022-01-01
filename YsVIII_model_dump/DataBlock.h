@@ -29,7 +29,7 @@ class data {
 public:
 	data() {};
 	virtual ~data() = default;
-	virtual void output_data() = 0;
+	virtual void output_data(std::string node_name) = 0;
 	uint32_t id;
 };
 struct BlockDesc {
@@ -51,7 +51,7 @@ public:
 
 	DataBlock(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t sz, unsigned int reading_method, BlockDesc caracs);
 
-	void output_data(std::string filepath);
+	void output_data(std::string node_name);
 
 
 };
@@ -65,20 +65,20 @@ public:
 
 	INFO(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t size);
 
-	void output_data();
+	void output_data(std::string node_name);
 };
 class RTY2 : public data {
 public:
 	RTY2() = default;
 
-	float float0;
+	unsigned int material_variant;
 	uint8_t byte;
 	vector3<float> v0;
 
 	RTY2(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t size);
 
 
-	void output_data();
+	void output_data(std::string node_name);
 };
 class LIG3 : public data {
 public:
@@ -92,7 +92,7 @@ public:
 	LIG3(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t size);
 
 
-	void output_data();
+	void output_data(std::string node_name);
 
 };
 class INFZ : public data {
@@ -104,7 +104,7 @@ public:
 	INFZ(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t size);
 
 
-	void output_data();
+	void output_data(std::string node_name);
 };
 
 class BBOX : public data {
@@ -119,7 +119,7 @@ public:
 	BBOX(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t size);
 
 
-	void output_data();
+	void output_data(std::string node_name);
 
 };
 class CHID : public data {
@@ -130,7 +130,7 @@ public:
 	std::vector<std::string> strs;
 
 	CHID(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t size);
-	void output_data();
+	void output_data(std::string node_name);
 
 };
 
@@ -144,12 +144,29 @@ public:
 	JNTV(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t size);
 
 
-	void output_data();
+	void output_data(std::string node_name);
 
 };
 
+struct texture {
+	std::string name;
 
-
+	unsigned int texture_type, uint0, uint2, uint3, uint4, uint5, uint6;
+	texture(const std::vector<uint8_t>& file_content, unsigned int& addr){
+		uint0 = read_data<unsigned int>(file_content, addr);
+		texture_type = read_data<unsigned int>(file_content, addr);
+		uint2 = read_data<unsigned int>(file_content, addr);
+		uint3 = read_data<unsigned int>(file_content, addr);
+		uint4 = read_data<unsigned int>(file_content, addr);
+		uint5 = read_data<unsigned int>(file_content, addr);
+		uint6 = read_data<unsigned int>(file_content, addr);
+	}
+};
+struct material {
+	std::string name;
+	std::vector<texture> textures;
+	std::vector<vector4<float>> parameters;
+};
 
 class MAT6 : public data {
 public:
@@ -158,11 +175,13 @@ public:
 	int count;
 	std::vector <int> int0s;
 	std::vector <DataBlock> matm;
+	unsigned int MATM_flags, MATE_flags;
+	std::vector<material> mats;
 	//0x6d1165
 	MAT6(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t size);
 
 
-	void output_data();
+	void output_data(std::string node_name);
 
 };
 
@@ -178,7 +197,7 @@ public:
 	BON3(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t size);
 
 
-	void output_data();
+	void output_data(std::string node_name);
 
 };
 
@@ -211,7 +230,7 @@ public:
 	std::vector<uint8_t> content;
 
 	ITP(const std::vector<uint8_t> &file_content, unsigned int &addr, std::string name);
-	void output_data();
+	void output_data(std::string node_name);
 	void unswizzle(size_t width, size_t height, size_t blockSize);
 	void add_header();
 };
@@ -227,7 +246,7 @@ public:
 	TEXI(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t size);
 
 
-	void output_data();
+	void output_data(std::string node_name);
 
 };
 
@@ -241,7 +260,7 @@ public:
 	TEX2(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t size);
 
 
-	void output_data();
+	void output_data(std::string node_name);
 
 };
 
@@ -278,6 +297,7 @@ struct mesh_data {
 	std::vector<unsigned int>indexes;
 	size_t block_size;
 	size_t nb_blocks;
+	unsigned int material_id;
 };
 class VPAX : public data {
 public:
@@ -292,6 +312,6 @@ public:
 	VPAX(const std::vector<uint8_t> &file_content, unsigned int &addr, std::string name, int game_version);
 
 
-	void output_data();
+	void output_data(std::string node_name);
 
 };

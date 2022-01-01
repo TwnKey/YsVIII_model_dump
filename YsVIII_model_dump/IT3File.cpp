@@ -25,7 +25,7 @@ IT3File::IT3File(const std::vector<uint8_t> &file_content)
 					started = true;
 				else
 					this->nodes.push_back(current_node);
-
+				
 				current_node = node(current_addr); //reset
 				current_node.info = new INFO(file_content, current_addr, size);
 				break;
@@ -54,14 +54,14 @@ IT3File::IT3File(const std::vector<uint8_t> &file_content)
 				current_node.bon3 = new BON3(file_content, current_addr, size);
 				break;
 			case TEXI_ID:
-				current_node.texi = new TEXI(file_content, current_addr, size);
+				current_node.texi.push_back(TEXI(file_content, current_addr, size));
 				break;
 			case TEX2_ID:
-				current_node.tex2 = new TEX2(file_content, current_addr, size);
+				current_node.tex2.push_back(TEX2(file_content, current_addr, size));
 				break;
 			case ITP_ID:
 				current_addr -= 8; //removing the "size" and identifier, since in the case of pure ITP files, there is no size after the four cc
-				current_node.itp = new ITP(file_content, current_addr, "test");
+				current_node.itp.push_back(ITP(file_content, current_addr, "test"));
 				break;
 			case VPAX_ID:
 				current_node.vpax = new VPAX(file_content, current_addr, current_node.info->text_id1, 1);
@@ -108,38 +108,45 @@ IT3File::~IT3File()
 }
 
 void node::output_data() {
-	if (info)
-		info->output_data();
-	if (rty2)
-		rty2->output_data();
-	if (lig3)
-		lig3->output_data();
-	if (infz)
-		infz->output_data();
-	if (bbox)
-		bbox->output_data();
-	if (chid)
-		chid->output_data();
-	if (jntv)
-		jntv->output_data();
-	if (mat6)
-		mat6->output_data();
-	if (bon3)
-		bon3->output_data();
-	if (texi)
-		texi->output_data();
-	if (tex2)
-		tex2->output_data();
-	if (itp)
-		itp->output_data();
-	if (vpax)
-		vpax->output_data();
-
+	if (info){
+		info->output_data(info->text_id1);
+		if (rty2)
+			rty2->output_data(info->text_id1);
+		if (lig3)
+			lig3->output_data(info->text_id1);
+		if (infz)
+			infz->output_data(info->text_id1);
+		if (bbox)
+			bbox->output_data(info->text_id1);
+		if (chid)
+			chid->output_data(info->text_id1);
+		if (jntv)
+			jntv->output_data(info->text_id1);
+		if (mat6)
+			mat6->output_data(info->text_id1);
+		if (bon3)
+			bon3->output_data(info->text_id1);
+		if (!texi.empty()) {
+			for (auto tex : texi)
+				tex.output_data(info->text_id1);
+		}
+		if (!tex2.empty()) {
+			for (auto tex : tex2)
+				tex.output_data(info->text_id1);
+		}
+		if (!itp.empty()) {
+			for (auto tp : itp)
+				tp.output_data(info->text_id1);
+		}
+		if (vpax)
+			vpax->output_data(info->text_id1);
+	}
 }
 
 std::string node::to_string() {
-	std::string result = "node:\n";
+	std::string result = "";
 	if (info)
+		result = "node:" + info->text_id1 +"\n";
 		result = result + "INFO ";
 	if (rty2)
 		result = result + "RTY2 ";
@@ -157,11 +164,11 @@ std::string node::to_string() {
 		result = result + "MAT6 ";
 	if (bon3)
 		result = result + "BON3 ";
-	if (texi)
+	if (!texi.empty())
 		result = result + "TEXI ";
-	if (tex2)
+	if (!tex2.empty())
 		result = result + "TEX2 ";
-	if (itp)
+	if (!itp.empty()) 
 		result = result + "ITP ";
 	if (vpax)
 		result = result + "VPAX ";

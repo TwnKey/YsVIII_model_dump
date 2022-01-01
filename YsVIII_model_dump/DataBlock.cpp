@@ -68,9 +68,9 @@ DataBlock::DataBlock(const std::vector<uint8_t> &file_content, unsigned int &add
 
 }
 
-void DataBlock::output_data(std::string filepath) {
+void DataBlock::output_data(std::string node_name) {
 	std::ofstream OutFile;
-	OutFile.open(filepath, std::ios::out | std::ios::binary);
+	OutFile.open(node_name, std::ios::out | std::ios::binary);
 	OutFile.write((char*)content.data(), sizeof(char));
 	OutFile.close();
 }
@@ -118,24 +118,35 @@ INFO::INFO(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t 
 	}
 }
 
-void INFO::output_data() {
-	std::cout << text_id1 << std::endl;
-	for (auto f : floats)
-		std::cout << f << std::endl;
+void INFO::output_data(std::string node_name) {
+
+	
 }
 
 RTY2::RTY2(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t size) {
-	float0 = read_data<float>(file_content, addr);
+	material_variant = read_data<unsigned int>(file_content, addr);
 	byte = read_data<uint8_t>(file_content, addr);
 	v0 = read_data<vector3<float>>(file_content, addr);
 }
 
 
-void RTY2::output_data() {
-	std::cout << float0 << ", " << byte << ", " << v0.x << ", " << v0.y << ", " << v0.z << std::endl;
+void RTY2::output_data(std::string node_name) {
+	if (material_variant != 0){
+	std::ofstream text_file;
+	
+	//text_file.open(node_name + "_MAT6.txt", std::ios_base::app);
+	text_file.open("Liste Variants.txt", std::ios_base::app);
+	text_file << "Material variant: " << material_variant << std::endl;
+	text_file.close();
+	text_file.open("Variants.txt", std::ios_base::app);
+	text_file << "Material variant: " << material_variant << std::endl;
+	text_file.close();
+	}
+	// << ", " << byte << ", " << v0.x << ", " << v0.y << ", " << v0.z << std::endl;
 }
 
 LIG3::LIG3(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t size) {
+	
 	v0 = read_data<vector4<float>>(file_content, addr);
 	byte = read_data<uint8_t>(file_content, addr);
 	float0 = read_data<float>(file_content, addr);
@@ -143,7 +154,7 @@ LIG3::LIG3(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t 
 }
 
 
-void LIG3::output_data() {
+void LIG3::output_data(std::string node_name) {
 	std::cout << v0.x << ", " << v0.y << ", " << v0.z << ", " << v0.t << std::endl;
 	std::cout << byte << std::endl;
 	std::cout << float0 << std::endl;
@@ -157,7 +168,7 @@ INFZ::INFZ(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t 
 }
 
 
-void INFZ::output_data() {
+void INFZ::output_data(std::string node_name) {
 	std::cout << v0.x << ", " << v0.y << ", " << v0.z << ", " << v0.t << std::endl;
 }
 
@@ -170,7 +181,7 @@ BBOX::BBOX(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t 
 }
 
 
-void BBOX::output_data() {
+void BBOX::output_data(std::string node_name) {
 	std::cout << a.x << ", " << a.y << ", " << a.z << std::endl;
 	std::cout << b.x << ", " << b.y << ", " << b.z << std::endl;
 	std::cout << c.x << ", " << c.y << ", " << c.z << std::endl;
@@ -192,7 +203,7 @@ CHID::CHID(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t 
 }
 
 
-void CHID::output_data() {
+void CHID::output_data(std::string node_name) {
 	std::cout << intro << std::endl;
 	for (unsigned int idx_str = 0; idx_str < strs.size(); idx_str++)
 		std::cout << strs[idx_str] << std::endl;
@@ -208,7 +219,7 @@ JNTV::JNTV(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t 
 }
 
 
-void JNTV::output_data() {
+void JNTV::output_data(std::string node_name) {
 	std::cout << id << std::endl;
 	std::cout << v0.x << ", " << v0.y << ", " << v0.z << ", " << v0.t << std::endl;
 }
@@ -217,7 +228,8 @@ void JNTV::output_data() {
 
 
 
-//0x6d1165
+//0x006B7076
+//419b2b Info sur le material parsées ici 419b2b
 MAT6::MAT6(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t size) {
 
 	count = read_data<uint32_t>(file_content, addr);
@@ -229,13 +241,87 @@ MAT6::MAT6(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t 
 		matm.insert(matm.end(), chks.begin(), chks.end()); //le 4 est hardcodé
 
 	}
+	for (unsigned int idx = 0; idx < matm.size(); idx++) {
+		material current_mat;
+		unsigned int addr_mat = 0;
+		unsigned int magic_matm = read_data<uint32_t>(matm[idx].content, addr_mat);
+		unsigned int MATM_flags = read_data<uint32_t>(matm[idx].content, addr_mat);
+		unsigned int MATM_part_size = read_data<uint32_t>(matm[idx].content, addr_mat);
+
+		addr_mat = 0x28;
+		size_t count_parameters = read_data<uint32_t>(matm[idx].content, addr_mat);
+		addr_mat += 4;
+		size_t count_tex = read_data<uint32_t>(matm[idx].content, addr_mat);
+		for (unsigned int idx_param = 0; idx_param < count_parameters; idx_param++)
+			current_mat.parameters.push_back(read_data<vector4<float>>(matm[idx].content, addr_mat));
+		unsigned int addr_tex = addr_mat;
+
+		
+
+		addr_mat = MATM_part_size;
+		unsigned int magic_mate = read_data<uint32_t>(matm[idx].content, addr_mat);
+		unsigned int MATE_flags = read_data<uint32_t>(matm[idx].content, addr_mat);
+		size_t MATE_part_size = read_data<uint32_t>(matm[idx].content, addr_mat);
+		unsigned int offset_to_first_texture = read_data<uint32_t>(matm[idx].content, addr_mat);
+		unsigned int start_addr = addr_mat;
+		current_mat.name = read_string(matm[idx].content, addr_mat);
+		addr_mat = start_addr + offset_to_first_texture;
+		size_t block_size = read_data<uint32_t>(matm[idx].content, addr_mat);
+
+		std::vector<std::string> names;
+		for (unsigned int idx_tex = 0; idx_tex < count_tex; idx_tex++){
+		//while ((addr_mat + block_size) <= matm[idx].content.size()) {
+			start_addr = addr_mat;
+			std::string tex_name = read_string(matm[idx].content, addr_mat);
+			names.push_back(tex_name);
+			addr_mat = start_addr + block_size;
+		}
+		addr_mat = addr_tex;
+		for (unsigned int idx_tex = 0; idx_tex < count_tex; idx_tex++) {
+			texture tex = texture(matm[idx].content, addr_mat);
+			tex.name = names[idx_tex];
+			current_mat.textures.push_back(tex);
+		}
+			
+		this->mats.push_back(current_mat);
+	}
 
 
 
 }
 
 
-void MAT6::output_data() {
+void MAT6::output_data(std::string node_name) {
+	std::ofstream text_file;
+	text_file.open("Liste Variants.txt", std::ios_base::app);
+	//text_file.open(node_name + "_MAT6.txt", std::ios_base::app);
+	
+	text_file << "MAT6: " << node_name << std::endl;
+	text_file << "count: " << count << std::endl;
+	for (int i : int0s)
+		text_file << i << std::endl;
+
+	for (material mat : mats) {
+		text_file << "MAT: " << mat.name << std::endl;
+		for (auto param : mat.parameters) {
+			text_file << param.x << ", " << param.y << ", " << param.z << ", " << param.t << std::endl;
+		}
+		for (texture tex : mat.textures) {
+			text_file << "Name: " << tex.name << std::endl;
+			text_file << std::hex << "Type: " << tex.texture_type << std::endl;
+			text_file << std::hex << tex.uint0 << " " << tex.uint2 << " " << tex.uint3 << " " << tex.uint4 << " " << tex.uint5 << " " << tex.uint6 << std::endl;
+		}
+	}
+	
+	text_file << std::endl << std::endl;
+	text_file.close();
+	
+	for (unsigned int i = 0; i < count; i++) {
+		std::ofstream OutFile;
+		OutFile.open(node_name + "_material_" + std::to_string(i) + ".bin", std::ios::out | std::ios::binary);
+		OutFile.write((char*)matm[i].content.data(), matm[i].content.size() * sizeof(char));
+		OutFile.close();
+	}
 
 }
 
@@ -261,8 +347,15 @@ BON3::BON3(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t 
 }
 
 
-void BON3::output_data() {
+void BON3::output_data(std::string node_name) {
+	std::ofstream text_file;
+	text_file.open(node_name + "BON3.txt");
+	text_file << "BON3: " << std::endl;
+	text_file << "int0: " << int0 << std::endl;
+	text_file << "int1: " << int0 << std::endl;
+	text_file << "name: " << name << std::endl;
 
+	text_file.close();
 }
 
 
@@ -361,8 +454,16 @@ void ITP::add_header() {
 	this->content.insert(this->content.begin(), header.begin(), header.end());
 }
 
-void ITP::output_data() {
-	std::cout << "height: " << hdr.dim1 << ", width: " << hdr.dim2 << std::endl;
+void ITP::output_data(std::string node_name) {
+
+	std::ofstream text_file;
+	text_file.open(node_name + ""+ this->name+".txt");
+	text_file << "ITP: " << std::endl; 
+	text_file << "height: " << hdr.dim1 << std::endl;
+	text_file << "width: " << hdr.dim2 << std::endl;
+	text_file.close();
+
+	
 	this->unswizzle(hdr.dim1, hdr.dim2, 0x10);
 	this->add_header();
 	std::ofstream OutFile;
@@ -454,9 +555,9 @@ TEXI::TEXI(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t 
 }
 
 
-void TEXI::output_data() {
+void TEXI::output_data(std::string node_name) {
 	
-	itp.output_data();
+	itp.output_data(node_name);
 }
 
 
@@ -470,9 +571,9 @@ TEX2::TEX2(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t 
 }
 
 
-void TEX2::output_data() {
+void TEX2::output_data(std::string node_name) {
 
-	itp.output_data();
+	itp.output_data(node_name);
 }
 
 VPAX::VPAX(const std::vector<uint8_t> &file_content, unsigned int &addr, std::string name, int game_version) {
@@ -550,6 +651,7 @@ VPAX::VPAX(const std::vector<uint8_t> &file_content, unsigned int &addr, std::st
 			size_t count1 = local_c;
 			size_t count2 = mesh.header.uint0[0];
 
+			mesh.material_id = mesh.header.uint0[0x44];
 			mesh.block_size = iVar4;
 			mesh.nb_blocks = mesh.header.uint0[0];
 
@@ -594,7 +696,7 @@ VPAX::VPAX(const std::vector<uint8_t> &file_content, unsigned int &addr, std::st
 }
 
 
-void VPAX::output_data() {
+void VPAX::output_data(std::string node_name) {
 	for (unsigned int idx_mesh = 0; idx_mesh < meshes_d.size(); idx_mesh++) {
 		std::ofstream OutFile;
 		std::cout << "Vertex size: " << std::hex << meshes_d[idx_mesh].block_size << " Nb blocks: " << meshes_d[idx_mesh].nb_blocks << std::endl;

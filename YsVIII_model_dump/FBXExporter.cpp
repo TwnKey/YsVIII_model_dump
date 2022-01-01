@@ -2,24 +2,123 @@
 #include <assimp\scene.h>
 #include <assimp\Exporter.hpp>
 #include <iostream>
+#include <unordered_map>
+
+void assign_property(aiMaterial& mat_to_update, material mat, unsigned int index_tex, aiTextureType type) { //aiTextureType_DIFFUSE
+	if (index_tex < mat.textures.size()) {
+		if (mat.textures[index_tex].name.compare("") != 0) {
+			aiString name;
+			name.Set(mat.textures[index_tex].name + ".dds");
+			size_t nb_tex = mat_to_update.GetTextureCount(type);
+			mat_to_update.AddProperty(&name, AI_MATKEY_TEXTURE(type, nb_tex));
+		}
+		//there was no texture with that index, so we don't do anything
+	}
+	//there was no texture with that index, so we don't do anything
+
+}
+
+void assign_property_based_on_name(aiMaterial& mat_to_update, material mat) {
+	for (unsigned int idx_tex = 0; idx_tex < mat.textures.size(); idx_tex++) {
+		//we guess from the texture name...
+		aiString name;
+		name.Set(mat.textures[idx_tex].name + ".dds");
+
+
+		size_t idx = mat.textures[idx_tex].name.find_last_of("_");
+		if (idx != std::string::npos) {
+			std::string suffix = mat.textures[idx_tex].name.substr(idx + 1);
+
+			//removing all numbers from the suffix, ex 01n becomes n, t1 becomes t, but i'm not sure if t means anything actually
+			suffix.erase(std::remove_if(std::begin(suffix), std::end(suffix),
+				[](auto ch) { return std::isdigit(ch); }),
+				suffix.end());
+
+			aiTextureType type;
+
+			if (suffix.compare("n") == 0)
+				type = aiTextureType_NORMALS;
+			else if (suffix.compare("s") == 0)
+				type = aiTextureType_SPECULAR;
+			else
+				type = aiTextureType_DIFFUSE;
+
+			size_t nb_tex = mat_to_update.GetTextureCount(type);
+			mat_to_update.AddProperty(&name, AI_MATKEY_TEXTURE(type, nb_tex));
+		}
+
+
+	}
+}
+
+aiMaterial* guess_material_from_mat_struct(material mat, unsigned int variant) {
+	//0638870 <= I hate this
+
+	/*we will miss a LOT of parameters, because I'm certainly not going to reverse every layout of material parameters
+	(afaik their parsing is hardcoded and very specific); it will also not be perfect and more of a guess than anything*/
+
+	aiMaterial* material = new aiMaterial();
+
+	aiString name;
+	name.Set(mat.name);
+	material->AddProperty(&name, AI_MATKEY_NAME);
+
+	switch (variant) {
+	case 0:
+		break;
+	case 8: //lambert, osef
+		break;
+	/*case 15:
+
+		break;
+	case 17:
+		break;
+	case 32:
+		break;
+	case 110:
+		break;
+	case 115:
+		break;
+	case 172:
+		break;*/
+
+	/*actually you know what, fuck it*/
+	default: 
+		assign_property_based_on_name(*material, mat);
+		break;
+	}
+	return material;
+}
+
 
 
 void FBXExporter::GenerateScene(IT3File file){
-	file.nodes.erase(file.nodes.begin() + 0x6E);
 	size_t nb_meshes = 0;
+	size_t nb_materials = 0;
 	size_t nb_nodes = file.nodes.size();
 
 	for (const node& nd : file.nodes) {
 		if (nd.vpax) {
-			nb_meshes+= nd.vpax->meshes_d.size();
+			std::cout << nd.info->text_id1 << " meshes: " << nd.vpax->meshes_d.size()    << std::endl;
+			nb_meshes += nd.vpax->meshes_d.size();
+		}
+		if (nd.mat6) {
+			std::cout << nd.info->text_id1 << " materials: " << nd.mat6->mats.size() << std::endl;
+			nb_materials += nd.mat6->mats.size();
 		}
 	}
-
+	std::cout << "NB MATERIALS: " << nb_materials << std::endl;
+	std::cout << "NB MESHES: " << nb_meshes << std::endl;
+	if (nb_materials != nb_meshes){
+		
+		//throw std::exception("Here the number of materials and meshes in the node are different. Go investigate again");
+	}
+		//Seems like it's always the case?
 	aiNode** ainodes = new aiNode* [nb_nodes];
 	aiMesh** aimeshes = new aiMesh * [nb_meshes];
-	aiMaterial** aimaterials = new aiMaterial * [nb_meshes];
+	aiMaterial** aimaterials = new aiMaterial * [nb_materials];
 
-	unsigned int count_total_mesh = 0;
+	unsigned int count_total_mesh = 0, count_total_material = 0;
 	//first we create all ainodes separately, then we will organize them.
 	for (unsigned int idx_node = 0; idx_node < nb_nodes; idx_node++) {
 
@@ -28,6 +127,9 @@ void FBXExporter::GenerateScene(IT3File file){
 		ainodes[idx_node] = new aiNode();
 		ainodes[idx_node]->mName = current_node.info->text_id1;
 		//creating mesh if there is any in the node
+		size_t count_material_ = 0;
+		std::unordered_map<unsigned int, unsigned int> node_materials;
+
 		if (current_node.vpax) {
 			size_t nb_mesh_in_vpax = current_node.vpax->meshes_d.size();
 			ainodes[idx_node]->mMeshes = new unsigned[nb_mesh_in_vpax];
@@ -67,20 +169,39 @@ void FBXExporter::GenerateScene(IT3File file){
 				mesh->mFaces = faces;
 				mesh->mPrimitiveTypes = aiPrimitiveType_TRIANGLE; // workaround, issue #3778
 				mesh->mName = current_node.vpax->name;
+				
 				std::cout << "Name: " << current_node.vpax->name << std::endl;
 				std::cout << "Nb vertices: " << std::hex << mesh->mNumVertices << std::endl;
 				std::cout << "Nb faces: " << std::hex << mesh->mNumFaces << std::endl;
 				std::cout << "max vertex index: " << *max_element(std::begin(mesh_.indexes), std::end(mesh_.indexes)) << std::endl;
 				// a valid material is needed, even if its empty
 
-				aiMaterial* material = new aiMaterial();            // deleted: Version.cpp:155
-				aimaterials[count_total_mesh] = material;
+				if ((node_materials.find(mesh_.material_id) == node_materials.end())) {
+					node_materials[mesh_.material_id] = count_total_material;
+					aiMaterial* material = guess_material_from_mat_struct(current_node.mat6->mats[mesh_.material_id], current_node.rty2->material_variant);
+					mesh->mMaterialIndex = count_total_material;
+					aimaterials[count_total_material] = material;
+					count_total_material++;
+					
+
+
+				}
+				else {
+					mesh->mMaterialIndex = node_materials[mesh_.material_id];
+				}
+
+				
+					
+				//our material: current_node.mat6->mats[count_mesh_].name;
+				
+
 				aimeshes[count_total_mesh] = mesh;
 				ainodes[idx_node]->mMeshes[count_mesh_] = count_total_mesh;
 				
 				              // deleted: scene.cpp:77
 				count_mesh_++;
 				count_total_mesh++;
+				
 			}
 			
 
@@ -129,7 +250,7 @@ void FBXExporter::GenerateScene(IT3File file){
 	aiScene *out = new aiScene();                       // deleted: by us after use
 	out->mNumMeshes = nb_meshes;
 	out->mMeshes = aimeshes;            // deleted: Version.cpp:151
-	out->mNumMaterials = nb_meshes;
+	out->mNumMaterials = nb_materials;
 	out->mMaterials = aimaterials; // deleted: Version.cpp:158
 	out->mRootNode = rootNode;
 	out->mMetaData = new aiMetadata(); // workaround, issue #3781
@@ -163,4 +284,3 @@ FBXExporter::FBXExporter()
 FBXExporter::~FBXExporter()
 {
 }
-
