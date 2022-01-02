@@ -5,7 +5,7 @@
 #include <iostream>
 #include <fstream>
 #include "DataBlock.h"
-
+#include <map>
 
 
 class node {
@@ -43,8 +43,9 @@ class IT3File
 public:
 	IT3File(const std::vector<uint8_t> &file_content);
 	~IT3File();
-	std::vector<node> nodes;
+	std::map<std::string,node> nodes;
 	std::string to_string();
 	void output_data();
+	void add_kan7_from_m_file(IT3File m_file);
 };
 

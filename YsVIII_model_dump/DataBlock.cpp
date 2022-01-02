@@ -743,39 +743,62 @@ KAN7::KAN7(const std::vector<uint8_t>& file_content, unsigned int& addr, size_t 
 	if (things[0] > 0){
 		unsigned int uint0 = read_data<unsigned int>(file_content, addr);
 		std::vector<DataBlock> chks = read_DataBlocks(file_content, addr);
-		matms.insert(matms.end(), chks.begin(), chks.end());
+		matms.push_back(chks);
 	}
 	if (things[1] > 0) {
 		unsigned int uint1 = read_data<unsigned int>(file_content, addr);
 		std::vector<DataBlock> chks = read_DataBlocks(file_content, addr);
-		matms.insert(matms.end(), chks.begin(), chks.end());
+		matms.push_back(chks);
 	}
 	if (things[2] > 0) {
 		unsigned int uint2 = read_data<unsigned int>(file_content, addr);
 		std::vector<DataBlock> chks = read_DataBlocks(file_content, addr);
-		matms.insert(matms.end(), chks.begin(), chks.end());
+		matms.push_back(chks);
 	}
 	if (things[3] > 0) {
 		unsigned int uint3 = read_data<unsigned int>(file_content, addr);
 		std::vector<DataBlock> chks = read_DataBlocks(file_content, addr);
-		matms.insert(matms.end(), chks.begin(), chks.end());
+		matms.push_back(chks);
 	}
 	if (things[4] > 0) {
 		unsigned int uint4 = read_data<unsigned int>(file_content, addr);
 		std::vector<DataBlock> chks = read_DataBlocks(file_content, addr);
-		matms.insert(matms.end(), chks.begin(), chks.end());
+		matms.push_back(chks);
 	}
+	for (auto mats : matms) {
+		std::vector<uint8_t> content;
+		for (auto mat : mats) {
+			content.insert(content.end(), mat.content.begin(), mat.content.end());
+		}
+		unsigned int addr_mat = 0;
+		unsigned int magic = read_data<unsigned int>(content, addr_mat);
+		unsigned int check = read_data<unsigned int>(content, addr_mat);
+		addr_mat += 4;
+		unsigned int nb_structs = read_data<unsigned int>(content, addr_mat);
+		addr_mat += 0x30;
+		std::vector<kan> current_kan;
+		for (unsigned int i = 0; i < nb_structs; i++) {
+			kan k = read_data<kan>(content, addr_mat);
+			current_kan.push_back(k);
+		}
+		kans.push_back(current_kan);
+		
 
+	}
 }
 
 
 void KAN7::output_data(std::string node_name) {
 
 	unsigned int idx = 0;
-	for (auto mat : matms) {
+	for (auto mats : matms) {
 		std::ofstream OutFile;
 		OutFile.open(node_name + "_" + std::to_string(idx) + ".kan7", std::ios::out | std::ios::binary);
-		OutFile.write((char*)mat.content.data(), mat.content.size() * sizeof(char));
+		std::vector<uint8_t> content;
+		for (auto mat : mats) {
+			content.insert(content.end(), mat.content.begin(), mat.content.end());
+		}
+		OutFile.write((char*)content.data(), content.size() * sizeof(char));
 		OutFile.close();
 		idx++;
 	}

@@ -208,14 +208,21 @@ public:
 	void output_data(std::string node_name);
 
 };
+struct kan {
+	
+	matrix4 floats;
+	unsigned int vertex_idx;
+	unsigned int something;
 
+};
 class KAN7 : public data {
 public:
 	KAN7() = default;
 
 	int int0;
 	unsigned int things[0x28 / 4];
-	std::vector<DataBlock> matms;
+	std::vector<std::vector<DataBlock>> matms;
+	std::vector<std::vector<kan>> kans;
 	KAN7(const std::vector<uint8_t>& file_content, unsigned int& addr, size_t size);
 
 

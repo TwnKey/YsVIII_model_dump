@@ -110,14 +110,15 @@ void FBXExporter::GenerateScene(IT3File file){
 	size_t nb_materials = 0;
 	size_t nb_nodes = file.nodes.size();
 
-	for (const node& nd : file.nodes) {
-		if (nd.vpax) {
-			std::cout << nd.info->text_id1 << " meshes: " << nd.vpax->meshes_d.size()    << std::endl;
-			nb_meshes += nd.vpax->meshes_d.size();
+	for (auto it : file.nodes) {
+		
+		if (it.second.vpax) {
+			std::cout << it.second.info->text_id1 << " meshes: " << it.second.vpax->meshes_d.size()    << std::endl;
+			nb_meshes += it.second.vpax->meshes_d.size();
 		}
-		if (nd.mat6) {
-			std::cout << nd.info->text_id1 << " materials: " << nd.mat6->mats.size() << std::endl;
-			nb_materials += nd.mat6->mats.size();
+		if (it.second.mat6) {
+			std::cout << it.second.info->text_id1 << " materials: " << it.second.mat6->mats.size() << std::endl;
+			nb_materials += it.second.mat6->mats.size();
 		}
 	}
 	std::cout << "NB MATERIALS: " << nb_materials << std::endl;
@@ -133,9 +134,9 @@ void FBXExporter::GenerateScene(IT3File file){
 
 	unsigned int count_total_mesh = 0, count_total_material = 0;
 	//first we create all ainodes separately, then we will organize them.
-	for (unsigned int idx_node = 0; idx_node < nb_nodes; idx_node++) {
-
-		node current_node = file.nodes[idx_node];
+	unsigned int idx_node = 0;
+	for (auto it_nd : file.nodes){
+		node current_node = it_nd.second;
 
 		ainodes[idx_node] = new aiNode();
 		ainodes[idx_node]->mName = current_node.info->text_id1;
@@ -164,7 +165,30 @@ void FBXExporter::GenerateScene(IT3File file){
 					mat.d.x, mat.d.y, mat.d.z, mat.d.t);
 				bones[i]->mName = current_node.bon3->bones[i].name;
 				bones[i]->mOffsetMatrix = aiMat;
-				bones[i]->mNumWeights = 0;
+				std::string bone_name = current_node.bon3->bones[i].name;
+
+				if (file.nodes.count(bone_name)){
+					node corresponding_node = file.nodes[current_node.bon3->bones[i].name];
+					if (corresponding_node.kan7)
+					{
+					
+						bones[i]->mNumWeights = corresponding_node.kan7->kans[0].size();
+						bones[i]->mWeights = new aiVertexWeight[bones[i]->mNumWeights]();
+						unsigned int idx_kan = 0;
+						for (auto k : corresponding_node.kan7->kans[0]) {
+							idx_kan++;
+							aiVertexWeight weight;
+							weight.mWeight = k.floats.a.z;
+							weight.mVertexId = k.vertex_idx;
+							bones[i]->mWeights[idx_kan] = weight;
+						}
+
+					}
+					else {
+						bones[i]->mNumWeights = 0;
+						bones[i]->mWeights = NULL;
+					}
+				}
 			}
 		}
 		
@@ -213,10 +237,10 @@ void FBXExporter::GenerateScene(IT3File file){
 				mesh->mFaces = faces;
 				mesh->mPrimitiveTypes = aiPrimitiveType_TRIANGLE; // workaround, issue #3778
 				mesh->mName = current_node.vpax->name+"_"+std::to_string(count_mesh_);
-				/*if (bones) {
+				if (bones) {
 					mesh->mBones = bones;
 					mesh->mNumBones = nb_bones;
-				}*/
+				}
 				
 				std::cout << "Name: " << current_node.vpax->name << std::endl;
 				std::cout << "Nb vertices: " << std::hex << mesh->mNumVertices << std::endl;
@@ -259,13 +283,16 @@ void FBXExporter::GenerateScene(IT3File file){
 		else {
 			ainodes[idx_node]->mNumMeshes = 0;
 		}
-	
+		idx_node++;
 	}
 	//now we need to organize them.
 
 	aiNode* rootNode = NULL;
-	for (unsigned int idx_node = 0; idx_node < nb_nodes; idx_node++) {
-		node current_node = file.nodes[idx_node];
+
+	idx_node = 0;
+
+	for (auto it : file.nodes) {
+		node current_node = it.second;
 		aiNode * current_ainode = ainodes[idx_node];
 		std::string current_ainode_name = std::string(current_ainode->mName.C_Str());
 		if (current_ainode_name.compare("root") == 0)
@@ -293,6 +320,7 @@ void FBXExporter::GenerateScene(IT3File file){
 		else {
 			current_ainode->mNumChildren = 0;
 		}
+		idx_node++;
 	}
 	
 	// pack mesh(es), material, and root node into a new minimal aiScene

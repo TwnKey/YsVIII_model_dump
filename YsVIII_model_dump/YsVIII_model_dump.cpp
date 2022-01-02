@@ -18,6 +18,22 @@ int main(int argc, char ** argv)
 		std::cout << it3.to_string() << std::endl;
 		it3.output_data();
 	}
+	if (argc == 3) {
+		std::string filepath = std::string(argv[1]);
+		std::string m_filepath = std::string(argv[2]);
+
+		std::ifstream input(filepath, std::ios::binary);
+		std::vector<unsigned char> buffer(std::istreambuf_iterator<char>(input), {});
+		IT3File it3(buffer);
+		std::cout << it3.to_string() << std::endl;
+		
+
+		std::ifstream input_m(m_filepath, std::ios::binary);
+		std::vector<unsigned char> buffer2(std::istreambuf_iterator<char>(input_m), {});
+		IT3File it3_m(buffer2);
+		it3.add_kan7_from_m_file(it3_m);
+		it3.output_data();
+	}
 	
 
 
