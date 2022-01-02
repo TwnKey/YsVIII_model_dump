@@ -69,9 +69,12 @@ IT3File::IT3File(const std::vector<uint8_t> &file_content)
 			case VP11_ID:
 				current_node.vpax = new VPAX(file_content, current_addr, current_node.info->text_id1, 2);
 				break;
+			case KAN7_ID:
+				current_node.kan7 = new KAN7(file_content, current_addr, size);
+				break;
 			default:
 				current_addr += size;
-				std::cout << "skipped chunk because data type not yet reversed: " << id_to_ascii(FourCC) << std::endl;
+				std::cout << "skipped chunk because data type not yet reversed: " << id_to_ascii(FourCC) << std::hex << " size: " << size << std::endl;
 				break;
 			
 		}
@@ -140,6 +143,8 @@ void node::output_data() {
 		}
 		if (vpax)
 			vpax->output_data(info->text_id1);
+		if (kan7)
+			kan7->output_data(info->text_id1);
 	}
 }
 
@@ -172,6 +177,8 @@ std::string node::to_string() {
 		result = result + "ITP ";
 	if (vpax)
 		result = result + "VPAX ";
+	if (kan7)
+		result = result + "KAN7 ";
 
 
 	return result;

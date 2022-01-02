@@ -23,6 +23,7 @@ enum identifier {
 	TEX2_ID = 0x32584554,
 	IHAS_ID = 0x53414849,
 	VP11_ID = 0x31315056,
+	KAN7_ID = 0x374E414B,
 };
 
 class data {
@@ -61,7 +62,8 @@ class INFO : public data {
 public:
 	INFO() = default;
 	std::string text_id1, text_id2, text_id3;
-	std::vector<float> floats;
+	matrix4 transform;
+	vector3<float> v0;
 
 	INFO(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t size);
 
@@ -185,9 +187,7 @@ public:
 
 };
 
-struct matrix4 {
-	vector4<float> a, b, c, d;
-};
+
 struct bone {
 	std::string name;
 	matrix4 offset_matrix;
@@ -201,8 +201,22 @@ public:
 	std::string name;
 	
 	std::vector<bone> bones;
-
+	std::vector<DataBlock> matms;
 	BON3(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t size);
+
+
+	void output_data(std::string node_name);
+
+};
+
+class KAN7 : public data {
+public:
+	KAN7() = default;
+
+	int int0;
+	unsigned int things[0x28 / 4];
+	std::vector<DataBlock> matms;
+	KAN7(const std::vector<uint8_t>& file_content, unsigned int& addr, size_t size);
 
 
 	void output_data(std::string node_name);

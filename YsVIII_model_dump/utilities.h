@@ -22,7 +22,9 @@ struct vector2 {
 	T x;
 	T y;
 };
-
+struct matrix4 {
+	vector4<float> a, b, c, d;
+};
 template<typename T>
 T read_data(const std::vector<uint8_t> &file_content, unsigned int &addr) {
 	T result;

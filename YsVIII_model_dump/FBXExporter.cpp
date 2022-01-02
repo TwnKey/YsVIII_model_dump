@@ -139,9 +139,35 @@ void FBXExporter::GenerateScene(IT3File file){
 
 		ainodes[idx_node] = new aiNode();
 		ainodes[idx_node]->mName = current_node.info->text_id1;
+
+		aiMatrix4x4 transformNode = aiMatrix4x4(current_node.info->transform.a.x, current_node.info->transform.a.y, current_node.info->transform.a.z, current_node.info->transform.a.t,
+			current_node.info->transform.b.x, current_node.info->transform.b.y, current_node.info->transform.b.z, current_node.info->transform.b.t,
+			current_node.info->transform.c.x, current_node.info->transform.c.y, current_node.info->transform.c.z, current_node.info->transform.c.t,
+			current_node.info->transform.d.x, current_node.info->transform.d.y, current_node.info->transform.d.z, current_node.info->transform.d.t);
+
+		ainodes[idx_node]->mTransformation = transformNode;
 		//creating mesh if there is any in the node
 		size_t count_material_ = 0;
 		std::unordered_map<unsigned int, unsigned int> node_materials;
+		aiBone** bones = NULL;
+		size_t nb_bones = 0;
+		if (current_node.bon3) {
+			//creates the bones which are going to be shared among the meshes (?)
+			nb_bones = current_node.bon3->bones.size();
+			bones = new aiBone * [nb_bones];
+			for (unsigned int i = 0; i < nb_bones; i++) {
+				bones[i] = new aiBone();
+				matrix4 mat = current_node.bon3->bones[i].offset_matrix;
+				aiMatrix4x4 aiMat = aiMatrix4x4(mat.a.x, mat.a.y, mat.a.z, mat.a.t,
+					mat.b.x, mat.b.y, mat.b.z, mat.b.t,
+					mat.c.x, mat.c.y, mat.c.z, mat.c.t,
+					mat.d.x, mat.d.y, mat.d.z, mat.d.t);
+				bones[i]->mName = current_node.bon3->bones[i].name;
+				bones[i]->mOffsetMatrix = aiMat;
+				bones[i]->mNumWeights = 0;
+			}
+		}
+		
 
 		if (current_node.vpax) {
 			size_t nb_mesh_in_vpax = current_node.vpax->meshes_d.size();
@@ -186,7 +212,11 @@ void FBXExporter::GenerateScene(IT3File file){
 				mesh->mNumFaces = nb_faces;
 				mesh->mFaces = faces;
 				mesh->mPrimitiveTypes = aiPrimitiveType_TRIANGLE; // workaround, issue #3778
-				mesh->mName = current_node.vpax->name;
+				mesh->mName = current_node.vpax->name+"_"+std::to_string(count_mesh_);
+				/*if (bones) {
+					mesh->mBones = bones;
+					mesh->mNumBones = nb_bones;
+				}*/
 				
 				std::cout << "Name: " << current_node.vpax->name << std::endl;
 				std::cout << "Nb vertices: " << std::hex << mesh->mNumVertices << std::endl;
@@ -256,15 +286,15 @@ void FBXExporter::GenerateScene(IT3File file){
 					}
 				}
 			}
-			current_ainode->addChildren(idx_child, children);
+			current_ainode->mChildren = children;
 			current_ainode->mNumChildren = idx_child;
-			delete[] children;
+			
 		}
 		else {
 			current_ainode->mNumChildren = 0;
 		}
 	}
-
+	
 	// pack mesh(es), material, and root node into a new minimal aiScene
 
 	aiScene *out = new aiScene();                       // deleted: by us after use

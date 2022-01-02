@@ -21,6 +21,7 @@ public:
 	JNTV * jntv = NULL;
 	MAT6 * mat6 = NULL;
 	BON3 * bon3 = NULL;
+	KAN7* kan7 = NULL;
 	std::vector<TEXI> texi;
 	std::vector<TEX2> tex2;
 	std::vector<ITP> itp;

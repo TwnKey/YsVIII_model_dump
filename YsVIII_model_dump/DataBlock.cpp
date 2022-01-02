@@ -112,10 +112,10 @@ INFO::INFO(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t 
 
 	text_id1 = read_string(file_content, addr);
 	addr = start_addr + 0x40;
-
-	while (addr < start_addr + size) {
-		floats.push_back(read_data<float>(file_content, addr));
-	}
+	transform = read_data<matrix4>(file_content, addr);
+	v0 = read_data<vector3<float>>(file_content, addr);
+	
+	
 }
 
 void INFO::output_data(std::string node_name) {
@@ -340,7 +340,7 @@ BON3::BON3(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t 
 		std::vector<DataBlock> chks = read_DataBlocks(file_content, addr);
 		matm.insert(matm.end(), chks.begin(), chks.end());
 	}
-
+	matms = matm;
 	unsigned int addr_bone = 0;
 	unsigned int idx_bone = 0;
 
@@ -371,7 +371,7 @@ void BON3::output_data(std::string node_name) {
 
 	
 	unsigned int idx = 0;
-	for (auto mat : matm) {
+	for (auto mat : matms) {
 		std::ofstream OutFile;
 		OutFile.open(node_name + "_" + std::to_string(idx) + ".bones", std::ios::out | std::ios::binary);
 		OutFile.write((char*)mat.content.data(), mat.content.size() * sizeof(char));
@@ -732,4 +732,51 @@ void VPAX::output_data(std::string node_name) {
 		OutFile.close();
 	}
 	
+}
+
+KAN7::KAN7(const std::vector<uint8_t>& file_content, unsigned int& addr, size_t size) {
+
+	//
+	for (unsigned int i = 0; i < 0x28 / 4; i++)
+		things[i] = read_data<unsigned int>(file_content, addr);
+	
+	if (things[0] > 0){
+		unsigned int uint0 = read_data<unsigned int>(file_content, addr);
+		std::vector<DataBlock> chks = read_DataBlocks(file_content, addr);
+		matms.insert(matms.end(), chks.begin(), chks.end());
+	}
+	if (things[1] > 0) {
+		unsigned int uint1 = read_data<unsigned int>(file_content, addr);
+		std::vector<DataBlock> chks = read_DataBlocks(file_content, addr);
+		matms.insert(matms.end(), chks.begin(), chks.end());
+	}
+	if (things[2] > 0) {
+		unsigned int uint2 = read_data<unsigned int>(file_content, addr);
+		std::vector<DataBlock> chks = read_DataBlocks(file_content, addr);
+		matms.insert(matms.end(), chks.begin(), chks.end());
+	}
+	if (things[3] > 0) {
+		unsigned int uint3 = read_data<unsigned int>(file_content, addr);
+		std::vector<DataBlock> chks = read_DataBlocks(file_content, addr);
+		matms.insert(matms.end(), chks.begin(), chks.end());
+	}
+	if (things[4] > 0) {
+		unsigned int uint4 = read_data<unsigned int>(file_content, addr);
+		std::vector<DataBlock> chks = read_DataBlocks(file_content, addr);
+		matms.insert(matms.end(), chks.begin(), chks.end());
+	}
+
+}
+
+
+void KAN7::output_data(std::string node_name) {
+
+	unsigned int idx = 0;
+	for (auto mat : matms) {
+		std::ofstream OutFile;
+		OutFile.open(node_name + "_" + std::to_string(idx) + ".kan7", std::ios::out | std::ios::binary);
+		OutFile.write((char*)mat.content.data(), mat.content.size() * sizeof(char));
+		OutFile.close();
+		idx++;
+	}
 }
