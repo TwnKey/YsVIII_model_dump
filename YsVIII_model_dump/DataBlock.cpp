@@ -331,7 +331,7 @@ BON3::BON3(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t 
 
 	int0 = read_data<int>(file_content, addr);
 	unsigned int addr_ = addr;
-	name = read_string(file_content, addr);
+	mesh_name = read_string(file_content, addr);
 	addr = addr_ + 0x40;
 	int int1 = read_data<int>(file_content, addr);
 	std::vector <DataBlock> matm;
@@ -344,6 +344,14 @@ BON3::BON3(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t 
 	unsigned int addr_bone = 0;
 	unsigned int idx_bone = 0;
 
+	while (addr_bone < matm[0].content.size()) {
+		unsigned int addr_start = addr_bone;
+		std::string name = read_string(matm[0].content, addr_bone);
+		addr_bone = addr_start;
+		joints_names.push_back(name);
+		addr_bone = addr_start + 0x40;
+	}
+	addr_bone = 0;
 	while (addr_bone < matm[2].content.size()) {
 		unsigned int addr_start = addr_bone;
 		std::string name = read_string(matm[1].content, addr_bone);
@@ -352,7 +360,7 @@ BON3::BON3(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t 
 		addr_bone = addr_start + 0x40;
 
 		bone b(name, offset_mat);
-		bones.push_back(b);
+		bones[name] = b;
 	}
 
 
@@ -365,7 +373,7 @@ void BON3::output_data(std::string node_name) {
 	text_file << "BON3: " << std::endl;
 	text_file << "int0: " << int0 << std::endl;
 	text_file << "int1: " << int0 << std::endl;
-	text_file << "name: " << name << std::endl;
+	text_file << "mesh name: " << mesh_name << std::endl;
 
 	text_file.close();
 

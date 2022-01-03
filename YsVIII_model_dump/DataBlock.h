@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include "utilities.h"
+#include <unordered_map>
 enum identifier {
 	INFO_ID = 0x4F464E49,
 	RTY2_ID = 0x32595452,
@@ -191,6 +192,7 @@ public:
 struct bone {
 	std::string name;
 	matrix4 offset_matrix;
+	bone() = default;
 	bone(std::string name, matrix4 mat) : name(name), offset_matrix(mat) {}
 };
 class BON3 : public data {
@@ -198,9 +200,9 @@ public:
 	BON3() = default;
 
 	int int0, int1;
-	std::string name;
-	
-	std::vector<bone> bones;
+	std::string mesh_name;
+	std::vector<std::string> joints_names; 
+	std::unordered_map<std::string, bone> bones;
 	std::vector<DataBlock> matms;
 	BON3(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t size);
 
@@ -314,10 +316,8 @@ struct vertex {
 	vector4<float> no_idea7;
 	vector4<float> no_idea8;
 	vector4<float> no_idea9;
-	unsigned int no_idea10;
-	unsigned int no_idea11;
-	unsigned int no_idea12;
-	unsigned int no_idea13;
+	uint8_t weights[8];
+	uint8_t bones_indexes[8];
 
 };
 struct mesh_data {

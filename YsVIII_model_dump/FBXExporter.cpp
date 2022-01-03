@@ -150,47 +150,7 @@ void FBXExporter::GenerateScene(IT3File file){
 		//creating mesh if there is any in the node
 		size_t count_material_ = 0;
 		std::unordered_map<unsigned int, unsigned int> node_materials;
-		aiBone** bones = NULL;
-		size_t nb_bones = 0;
-		if (current_node.bon3) {
-			//creates the bones which are going to be shared among the meshes (?)
-			nb_bones = current_node.bon3->bones.size();
-			bones = new aiBone * [nb_bones];
-			for (unsigned int i = 0; i < nb_bones; i++) {
-				bones[i] = new aiBone();
-				matrix4 mat = current_node.bon3->bones[i].offset_matrix;
-				aiMatrix4x4 aiMat = aiMatrix4x4(mat.a.x, mat.a.y, mat.a.z, mat.a.t,
-					mat.b.x, mat.b.y, mat.b.z, mat.b.t,
-					mat.c.x, mat.c.y, mat.c.z, mat.c.t,
-					mat.d.x, mat.d.y, mat.d.z, mat.d.t);
-				bones[i]->mName = current_node.bon3->bones[i].name;
-				bones[i]->mOffsetMatrix = aiMat;
-				std::string bone_name = current_node.bon3->bones[i].name;
-
-				if (file.nodes.count(bone_name)){
-					node corresponding_node = file.nodes[current_node.bon3->bones[i].name];
-					if (corresponding_node.kan7)
-					{
-					
-						bones[i]->mNumWeights = corresponding_node.kan7->kans[0].size();
-						bones[i]->mWeights = new aiVertexWeight[bones[i]->mNumWeights]();
-						unsigned int idx_kan = 0;
-						for (auto k : corresponding_node.kan7->kans[0]) {
-							idx_kan++;
-							aiVertexWeight weight;
-							weight.mWeight = k.floats.a.z;
-							weight.mVertexId = k.vertex_idx;
-							bones[i]->mWeights[idx_kan] = weight;
-						}
-
-					}
-					else {
-						bones[i]->mNumWeights = 0;
-						bones[i]->mWeights = NULL;
-					}
-				}
-			}
-		}
+		
 		
 
 		if (current_node.vpax) {
@@ -202,7 +162,10 @@ void FBXExporter::GenerateScene(IT3File file){
 				aiVector3D* vertices = new aiVector3D[mesh_.vertices.size()];
 				aiVector3D* uv = new aiVector3D[mesh_.vertices.size()];
 
-				std::cout << "OBJ EXPORT " << std::endl;
+				
+				std::map<std::string, std::pair<std::vector<unsigned int>, std::vector<float>>> weights_map;
+				/*The mesh refers to a few (max 8) bones, that we need to create specifically for this mesh
+				*/
 				for (unsigned int idx_v = 0; idx_v < mesh_.vertices.size(); idx_v++)
 				{
 					vertices[idx_v].x = mesh_.vertices[idx_v].position.x;
@@ -212,8 +175,77 @@ void FBXExporter::GenerateScene(IT3File file){
 					uv[idx_v].x = abs(mesh_.vertices[idx_v].uv.x);
 					uv[idx_v].y = abs(1-mesh_.vertices[idx_v].uv.y);
 					uv[idx_v].z = 0;
-					//std::cout << vertices[idx_v].x << ", " << vertices[idx_v].y << ", " << vertices[idx_v].z << std::endl;
+
+					for (unsigned int idx_weight = 0; idx_weight < 8; idx_weight++) {
+						uint8_t weight = mesh_.vertices[idx_v].weights[idx_weight];
+						float weight_f = (float)weight / 255;
+						uint8_t joint_id = mesh_.vertices[idx_v].bones_indexes[idx_weight]-1;
+						if (joint_id != 0xFF) {
+							std::string joint_name = current_node.bon3->joints_names[joint_id];
+
+							if (weights_map.count(joint_name) == 0)
+								weights_map[joint_name].second = std::vector<float>();
+							
+							weights_map[joint_name].second.push_back(weight_f);
+							weights_map[joint_name].first.push_back(idx_v);
+						}
+						
+					}
+
 				}
+
+				aiBone** bones = NULL;
+				size_t nb_bones = 0;
+				if (current_node.bon3) {
+
+					nb_bones = weights_map.size();
+					bones = new aiBone * [nb_bones];
+					unsigned int i = 0;
+					for (auto it_w : weights_map){
+					//for (unsigned int i = 0; i < nb_bones; i++) {
+						bones[i] = new aiBone();
+
+						bones[i]->mNumWeights = it_w.second.second.size();
+						bones[i]->mWeights = new aiVertexWeight[bones[i]->mNumWeights]();
+						unsigned int idx_kan = 0;
+						for (unsigned int idx_w = 0; idx_w < bones[i]->mNumWeights; idx_w++) {
+							
+							aiVertexWeight weight;
+							weight.mWeight = it_w.second.second[idx_w];
+							weight.mVertexId = it_w.second.first[idx_w];
+							bones[i]->mWeights[idx_w] = weight;
+							idx_w++;
+						}
+
+
+						matrix4 mat = current_node.bon3->bones[it_w.first].offset_matrix;
+						aiMatrix4x4 aiMat = aiMatrix4x4(mat.a.x, mat.a.y, mat.a.z, mat.a.t,
+							mat.b.x, mat.b.y, mat.b.z, mat.b.t,
+							mat.c.x, mat.c.y, mat.c.z, mat.c.t,
+							mat.d.x, mat.d.y, mat.d.z, mat.d.t);
+						bones[i]->mName = it_w.first;
+						std::cout << "bone name: " << bones[i]->mName.C_Str() << std::endl;
+						bones[i]->mOffsetMatrix = aiMat;
+						std::string bone_name = it_w.first;
+
+						if (file.nodes.count(bone_name)) {
+							node corresponding_node = file.nodes[it_w.first];
+							if (corresponding_node.kan7)
+							{
+
+								
+
+							}
+							else {
+								
+							}
+						}
+						i++;
+					}
+					
+				}
+
+
 
 				size_t nb_faces = mesh_.indexes.size() / 3; // each face has 3 vertices?
 				aiFace* faces = new aiFace[nb_faces];
@@ -235,8 +267,12 @@ void FBXExporter::GenerateScene(IT3File file){
 				mesh->mVertices = vertices;
 				mesh->mNumFaces = nb_faces;
 				mesh->mFaces = faces;
+				mesh->mBones = bones;
+				mesh->mNumBones = nb_bones;
 				mesh->mPrimitiveTypes = aiPrimitiveType_TRIANGLE; // workaround, issue #3778
 				mesh->mName = current_node.vpax->name+"_"+std::to_string(count_mesh_);
+
+				
 				if (bones) {
 					mesh->mBones = bones;
 					mesh->mNumBones = nb_bones;
