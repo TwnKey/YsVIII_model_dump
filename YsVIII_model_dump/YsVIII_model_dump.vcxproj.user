@@ -9,7 +9,7 @@
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LocalDebuggerCommandArguments>"A:\Games\Ys VIII Lacrimosa of Dana\chr\pc\c000_p.it3"</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>"A:\Games\Ys VIII Lacrimosa of Dana\chr\pc\c000_p.it3" "A:\Games\Ys VIII Lacrimosa of Dana\chr\pc\c000_m.it3" "A:\Games\Ys VIII Lacrimosa of Dana\chr\pc\c000.mtb"</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
 </Project>

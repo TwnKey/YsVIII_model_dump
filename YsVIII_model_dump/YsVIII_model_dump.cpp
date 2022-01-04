@@ -8,8 +8,10 @@
 #include "IT3File.h"
 #include <string>
 #include "FBXExporter.h"
+#include "MTBFile.h"
 int main(int argc, char ** argv)
 {
+
 	if (argc == 2) {
 		std::string filepath = std::string(argv[1]);
 		std::ifstream input(filepath, std::ios::binary);
@@ -34,6 +36,29 @@ int main(int argc, char ** argv)
 		it3.add_kan7_from_m_file(it3_m);
 		it3.output_data();
 	}
+	if (argc == 4) {
+		std::string filepath = std::string(argv[1]);
+		std::string m_filepath = std::string(argv[2]);
+		std::string mtb_filepath = std::string(argv[3]);
+
+		std::ifstream input_mtb(mtb_filepath, std::ios::binary);
+		std::vector<unsigned char> buffer3(std::istreambuf_iterator<char>(input_mtb), {});
+		MTBFile mtb_f(buffer3);
+		exit(0);
+
+		std::ifstream input(filepath, std::ios::binary);
+		std::vector<unsigned char> buffer(std::istreambuf_iterator<char>(input), {});
+		IT3File it3(buffer);
+		std::cout << it3.to_string() << std::endl;
+
+
+		std::ifstream input_m(m_filepath, std::ios::binary);
+		std::vector<unsigned char> buffer2(std::istreambuf_iterator<char>(input_m), {});
+		IT3File it3_m(buffer2);
+		it3.add_kan7_from_m_file(it3_m);
+		it3.output_data();
+	}
+	
 	
 
 

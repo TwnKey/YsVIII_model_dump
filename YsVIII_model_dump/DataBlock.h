@@ -129,8 +129,8 @@ class CHID : public data {
 public:
 	CHID() = default;
 
-	std::string intro;
-	std::vector<std::string> strs;
+	std::string parent;
+	std::vector<std::string> children;
 
 	CHID(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t size);
 	void output_data(std::string node_name);

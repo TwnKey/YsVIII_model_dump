@@ -167,12 +167,14 @@
     <ClInclude Include="DataBlock.h" />
     <ClInclude Include="FBXExporter.h" />
     <ClInclude Include="IT3File.h" />
+    <ClInclude Include="MTBFile.h" />
     <ClInclude Include="utilities.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="DataBlock.cpp" />
     <ClCompile Include="FBXExporter.cpp" />
     <ClCompile Include="IT3File.cpp" />
+    <ClCompile Include="MTBFile.cpp" />
     <ClCompile Include="utilities.cpp" />
     <ClCompile Include="YsVIII_model_dump.cpp" />
   </ItemGroup>

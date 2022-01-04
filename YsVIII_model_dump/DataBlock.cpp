@@ -155,10 +155,7 @@ LIG3::LIG3(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t 
 
 
 void LIG3::output_data(std::string node_name) {
-	std::cout << v0.x << ", " << v0.y << ", " << v0.z << ", " << v0.t << std::endl;
-	std::cout << byte << std::endl;
-	std::cout << float0 << std::endl;
-	std::cout << v1.x << ", " << v1.y << ", " << v1.z << ", " << v1.t << std::endl;
+	
 
 }
 
@@ -169,7 +166,6 @@ INFZ::INFZ(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t 
 
 
 void INFZ::output_data(std::string node_name) {
-	std::cout << v0.x << ", " << v0.y << ", " << v0.z << ", " << v0.t << std::endl;
 }
 
 
@@ -182,31 +178,24 @@ BBOX::BBOX(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t 
 
 
 void BBOX::output_data(std::string node_name) {
-	std::cout << a.x << ", " << a.y << ", " << a.z << std::endl;
-	std::cout << b.x << ", " << b.y << ", " << b.z << std::endl;
-	std::cout << c.x << ", " << c.y << ", " << c.z << std::endl;
-	std::cout << d.x << ", " << d.y << ", " << d.z << std::endl;
 }
 
 CHID::CHID(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t size) {
 	unsigned int start_addr = addr;
 
-	intro = read_string(file_content, addr);
+	parent = read_string(file_content, addr);
 	addr = start_addr + 0x40;
 	size_t nb_strings = read_data<unsigned int>(file_content, addr);
 
 	for (unsigned int idx = 0; idx < nb_strings; idx++) {
 		start_addr = addr;
-		strs.push_back(read_string(file_content, addr));
+		children.push_back(read_string(file_content, addr));
 		addr = start_addr + 0x40;
 	}
 }
 
 
 void CHID::output_data(std::string node_name) {
-	std::cout << intro << std::endl;
-	for (unsigned int idx_str = 0; idx_str < strs.size(); idx_str++)
-		std::cout << strs[idx_str] << std::endl;
 }
 
 
@@ -220,8 +209,6 @@ JNTV::JNTV(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t 
 
 
 void JNTV::output_data(std::string node_name) {
-	std::cout << id << std::endl;
-	std::cout << v0.x << ", " << v0.y << ", " << v0.z << ", " << v0.t << std::endl;
 }
 
 
@@ -348,19 +335,21 @@ BON3::BON3(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t 
 		unsigned int addr_start = addr_bone;
 		std::string name = read_string(matm[0].content, addr_bone);
 		addr_bone = addr_start;
-		joints_names.push_back(name);
+		if (name.compare("") != 0)
+			joints_names.push_back(name);
 		addr_bone = addr_start + 0x40;
 	}
 	addr_bone = 0;
-	while (addr_bone < matm[2].content.size()) {
+	while (addr_bone < matm[0].content.size()) {
 		unsigned int addr_start = addr_bone;
-		std::string name = read_string(matm[1].content, addr_bone);
+		std::string name = read_string(matm[0].content, addr_bone);
 		addr_bone = addr_start;
-		matrix4 offset_mat = read_data<matrix4>(matm[2].content, addr_bone);
+		if (name.compare("") != 0){
+			matrix4 offset_mat = read_data<matrix4>(matm[2].content, addr_bone);
+			bone b(name, offset_mat);
+			bones[name] = b;
+		}
 		addr_bone = addr_start + 0x40;
-
-		bone b(name, offset_mat);
-		bones[name] = b;
 	}
 
 
@@ -440,9 +429,7 @@ ITP::ITP(const std::vector<uint8_t> &file_content, unsigned int &addr, std::stri
 					}
 					else {
 						size_t content_size = get_bpp(hdr.bpp)  * hdr.dim1 * hdr.dim2;
-						std::cout << "Texture size: " << std::hex << content_size << std::endl;
-						std::cout << std::hex << hdr.dim1 << " x " << hdr.dim2 << " x " << get_bpp(hdr.bpp) << std::endl;
-						std::cout << "Type: " << std::hex << hdr.type << std::endl;
+						
 						content.insert(content.end(), file_content.begin() + addr, file_content.begin() + addr + content_size);
 						addr = addr + content_size;
 					}
@@ -731,7 +718,6 @@ VPAX::VPAX(const std::vector<uint8_t> &file_content, unsigned int &addr, std::st
 void VPAX::output_data(std::string node_name) {
 	for (unsigned int idx_mesh = 0; idx_mesh < meshes_d.size(); idx_mesh++) {
 		std::ofstream OutFile;
-		std::cout << "Vertex size: " << std::hex << meshes_d[idx_mesh].block_size << " Nb blocks: " << meshes_d[idx_mesh].nb_blocks << std::endl;
 		OutFile.open(name + "_vertices_"+std::to_string(idx_mesh)+".idx", std::ios::out | std::ios::binary);
 		OutFile.write((char*)this->content_vertices[idx_mesh].data(), this->content_vertices[idx_mesh].size() * sizeof(char));
 		OutFile.close();

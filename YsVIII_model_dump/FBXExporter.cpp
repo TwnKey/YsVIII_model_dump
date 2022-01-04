@@ -113,16 +113,12 @@ void FBXExporter::GenerateScene(IT3File file){
 	for (auto it : file.nodes) {
 		
 		if (it.second.vpax) {
-			std::cout << it.second.info->text_id1 << " meshes: " << it.second.vpax->meshes_d.size()    << std::endl;
 			nb_meshes += it.second.vpax->meshes_d.size();
 		}
 		if (it.second.mat6) {
-			std::cout << it.second.info->text_id1 << " materials: " << it.second.mat6->mats.size() << std::endl;
 			nb_materials += it.second.mat6->mats.size();
 		}
 	}
-	std::cout << "NB MATERIALS: " << nb_materials << std::endl;
-	std::cout << "NB MESHES: " << nb_meshes << std::endl;
 	if (nb_materials != nb_meshes){
 		
 		//throw std::exception("Here the number of materials and meshes in the node are different. Go investigate again");
@@ -154,6 +150,7 @@ void FBXExporter::GenerateScene(IT3File file){
 		
 
 		if (current_node.vpax) {
+			std::cout << "Name: " << current_node.vpax->name << std::endl << std::endl;
 			size_t nb_mesh_in_vpax = current_node.vpax->meshes_d.size();
 			ainodes[idx_node]->mMeshes = new unsigned[nb_mesh_in_vpax];
 			ainodes[idx_node]->mNumMeshes = nb_mesh_in_vpax;
@@ -203,44 +200,61 @@ void FBXExporter::GenerateScene(IT3File file){
 					unsigned int i = 0;
 					for (auto it_w : weights_map){
 					//for (unsigned int i = 0; i < nb_bones; i++) {
-						bones[i] = new aiBone();
-
-						bones[i]->mNumWeights = it_w.second.second.size();
-						bones[i]->mWeights = new aiVertexWeight[bones[i]->mNumWeights]();
-						unsigned int idx_kan = 0;
-						for (unsigned int idx_w = 0; idx_w < bones[i]->mNumWeights; idx_w++) {
+						if (current_node.bon3->bones.count(it_w.first) == 0)
+						{
 							
-							aiVertexWeight weight;
-							weight.mWeight = it_w.second.second[idx_w];
-							weight.mVertexId = it_w.second.first[idx_w];
-							bones[i]->mWeights[idx_w] = weight;
-							idx_w++;
+							nb_bones--;
+						
+
+							
 						}
+						else {
+							bones[i] = new aiBone();
+
+							bones[i]->mNumWeights = it_w.second.second.size();
+							bones[i]->mWeights = new aiVertexWeight[bones[i]->mNumWeights]();
+
+							for (unsigned int idx_w = 0; idx_w < bones[i]->mNumWeights; idx_w++) {
+
+								aiVertexWeight weight;
+								weight.mWeight = it_w.second.second[idx_w];
+								weight.mVertexId = it_w.second.first[idx_w];
+								bones[i]->mWeights[idx_w] = weight;
+								idx_w++;
+							}
+							matrix4 mat = current_node.bon3->bones[it_w.first].offset_matrix;
+							aiMatrix4x4 aiMat = aiMatrix4x4(mat.a.x, mat.a.y, mat.a.z, mat.a.t,
+								mat.b.x, mat.b.y, mat.b.z, mat.b.t,
+								mat.c.x, mat.c.y, mat.c.z, mat.c.t,
+								mat.d.x, mat.d.y, mat.d.z, mat.d.t);
+							bones[i]->mName = it_w.first;
+							std::cout << "Created bone: " << bones[i]->mName.C_Str() << std::endl;
+							bones[i]->mOffsetMatrix = aiMat;
+
+							/*std::cout << "inverse bind matrix: " << std::endl;
+							std::cout << mat.to_string() << std::endl;*/
+
+							/*std::cout << "transform: " << std::endl;
+							matrix4 transformMat = file.nodes[bones[i]->mName.C_Str()].info->transform;
+							std::cout << transformMat.to_string() << std::endl;
+
+							std::string bone_name = it_w.first;*/
 
 
-						matrix4 mat = current_node.bon3->bones[it_w.first].offset_matrix;
-						aiMatrix4x4 aiMat = aiMatrix4x4(mat.a.x, mat.a.y, mat.a.z, mat.a.t,
-							mat.b.x, mat.b.y, mat.b.z, mat.b.t,
-							mat.c.x, mat.c.y, mat.c.z, mat.c.t,
-							mat.d.x, mat.d.y, mat.d.z, mat.d.t);
-						bones[i]->mName = it_w.first;
-						std::cout << "bone name: " << bones[i]->mName.C_Str() << std::endl;
-						bones[i]->mOffsetMatrix = aiMat;
-						std::string bone_name = it_w.first;
-
-						if (file.nodes.count(bone_name)) {
-							node corresponding_node = file.nodes[it_w.first];
-							if (corresponding_node.kan7)
-							{
+							/*if (file.nodes.count(bone_name)) {
+								node corresponding_node = file.nodes[it_w.first];
+								if (corresponding_node.kan7)
+								{
 
 								
 
-							}
-							else {
+								}
+								else {
 								
-							}
+								}
+							}*/
+							i++;
 						}
-						i++;
 					}
 					
 				}
@@ -267,10 +281,8 @@ void FBXExporter::GenerateScene(IT3File file){
 				mesh->mVertices = vertices;
 				mesh->mNumFaces = nb_faces;
 				mesh->mFaces = faces;
-				mesh->mBones = bones;
-				mesh->mNumBones = nb_bones;
 				mesh->mPrimitiveTypes = aiPrimitiveType_TRIANGLE; // workaround, issue #3778
-				mesh->mName = current_node.vpax->name+"_"+std::to_string(count_mesh_);
+				mesh->mName = current_node.vpax->name;//+"_"+std::to_string(count_mesh_);
 
 				
 				if (bones) {
@@ -278,10 +290,7 @@ void FBXExporter::GenerateScene(IT3File file){
 					mesh->mNumBones = nb_bones;
 				}
 				
-				std::cout << "Name: " << current_node.vpax->name << std::endl;
-				std::cout << "Nb vertices: " << std::hex << mesh->mNumVertices << std::endl;
-				std::cout << "Nb faces: " << std::hex << mesh->mNumFaces << std::endl;
-				std::cout << "max vertex index: " << *max_element(std::begin(mesh_.indexes), std::end(mesh_.indexes)) << std::endl;
+				
 				// a valid material is needed, even if its empty
 
 				if ((node_materials.find(mesh_.material_id) == node_materials.end())) {
@@ -335,9 +344,9 @@ void FBXExporter::GenerateScene(IT3File file){
 			rootNode = current_ainode;
 		if (current_node.chid) {
 
-			aiNode** children = new aiNode*[current_node.chid->strs.size()];
+			aiNode** children = new aiNode*[current_node.chid->children.size()];
 			unsigned int idx_child = 0;
-			for (std::string name : current_node.chid->strs) {
+			for (std::string name : current_node.chid->children) {
 				//find the corresponding node in ainodes
 				for (unsigned int idx_node_search = 0; idx_node_search < nb_nodes; idx_node_search++) {
 					aiNode* ptr_node = ainodes[idx_node_search];
