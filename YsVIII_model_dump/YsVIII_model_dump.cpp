@@ -9,6 +9,11 @@
 #include <string>
 #include "FBXExporter.h"
 #include "MTBFile.h"
+
+
+
+
+
 int main(int argc, char ** argv)
 {
 
@@ -44,7 +49,7 @@ int main(int argc, char ** argv)
 		std::ifstream input_mtb(mtb_filepath, std::ios::binary);
 		std::vector<unsigned char> buffer3(std::istreambuf_iterator<char>(input_mtb), {});
 		MTBFile mtb_f(buffer3);
-		exit(0);
+		
 
 		std::ifstream input(filepath, std::ios::binary);
 		std::vector<unsigned char> buffer(std::istreambuf_iterator<char>(input), {});
@@ -55,8 +60,12 @@ int main(int argc, char ** argv)
 		std::ifstream input_m(m_filepath, std::ios::binary);
 		std::vector<unsigned char> buffer2(std::istreambuf_iterator<char>(input_m), {});
 		IT3File it3_m(buffer2);
-		it3.add_kan7_from_m_file(it3_m);
-		it3.output_data();
+
+		Scene sc(it3, it3_m, mtb_f);
+		FBXExporter fbx_exp;
+
+
+		fbx_exp.ExportScene(sc);
 	}
 	
 	

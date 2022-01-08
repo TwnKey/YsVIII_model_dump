@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iostream>
 #include "FBXExporter.h"
+#include "MTBFile.h"
 //I should name it something else because I actually don't know what that is
 size_t get_bpp(size_t id) {
 switch (id) {
@@ -112,8 +113,10 @@ INFO::INFO(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t 
 
 	text_id1 = read_string(file_content, addr);
 	addr = start_addr + 0x40;
+
 	transform = read_data<matrix4>(file_content, addr);
 	v0 = read_data<vector3<float>>(file_content, addr);
+	
 	
 	
 }
@@ -229,7 +232,7 @@ MAT6::MAT6(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t 
 
 	}
 	for (unsigned int idx = 0; idx < matm.size(); idx++) {
-		material current_mat;
+		material_data current_mat;
 		unsigned int addr_mat = 0;
 		unsigned int magic_matm = read_data<uint32_t>(matm[idx].content, addr_mat);
 		unsigned int MATM_flags = read_data<uint32_t>(matm[idx].content, addr_mat);
@@ -288,7 +291,7 @@ void MAT6::output_data(std::string node_name) {
 	for (int i : int0s)
 		text_file << i << std::endl;
 
-	for (material mat : mats) {
+	for (material_data mat : mats) {
 		text_file << "MAT: " << mat.name << std::endl;
 		for (auto param : mat.parameters) {
 			text_file << param.x << ", " << param.y << ", " << param.z << ", " << param.t << std::endl;
@@ -340,13 +343,13 @@ BON3::BON3(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t 
 		addr_bone = addr_start + 0x40;
 	}
 	addr_bone = 0;
-	while (addr_bone < matm[0].content.size()) {
+	while (addr_bone < matm[1].content.size()) {
 		unsigned int addr_start = addr_bone;
-		std::string name = read_string(matm[0].content, addr_bone);
+		std::string name = read_string(matm[1].content, addr_bone);
 		addr_bone = addr_start;
 		if (name.compare("") != 0){
 			matrix4 offset_mat = read_data<matrix4>(matm[2].content, addr_bone);
-			bone b(name, offset_mat);
+			bone_data b(name, offset_mat);
 			bones[name] = b;
 		}
 		addr_bone = addr_start + 0x40;
@@ -715,17 +718,19 @@ VPAX::VPAX(const std::vector<uint8_t> &file_content, unsigned int &addr, std::st
 }
 
 
+
+
 void VPAX::output_data(std::string node_name) {
 	for (unsigned int idx_mesh = 0; idx_mesh < meshes_d.size(); idx_mesh++) {
 		std::ofstream OutFile;
-		OutFile.open(name + "_vertices_"+std::to_string(idx_mesh)+".idx", std::ios::out | std::ios::binary);
+		OutFile.open(name + "_vertices_" + std::to_string(idx_mesh) + ".idx", std::ios::out | std::ios::binary);
 		OutFile.write((char*)this->content_vertices[idx_mesh].data(), this->content_vertices[idx_mesh].size() * sizeof(char));
 		OutFile.close();
 		OutFile.open(name + "_indexes_" + std::to_string(idx_mesh) + ".idx", std::ios::out | std::ios::binary);
 		OutFile.write((char*)this->content_indexes[idx_mesh].data(), this->content_indexes[idx_mesh].size() * sizeof(char));
 		OutFile.close();
 	}
-	
+
 }
 
 KAN7::KAN7(const std::vector<uint8_t>& file_content, unsigned int& addr, size_t size) {
@@ -770,9 +775,10 @@ KAN7::KAN7(const std::vector<uint8_t>& file_content, unsigned int& addr, size_t 
 		addr_mat += 4;
 		unsigned int nb_structs = read_data<unsigned int>(content, addr_mat);
 		addr_mat += 0x30;
-		std::vector<kan> current_kan;
+		std::vector<key_animation> current_kan;
 		for (unsigned int i = 0; i < nb_structs; i++) {
-			kan k = read_data<kan>(content, addr_mat);
+			key_animation k = key_animation(content, addr_mat);
+			
 			current_kan.push_back(k);
 		}
 		kans.push_back(current_kan);

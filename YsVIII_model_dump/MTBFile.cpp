@@ -31,6 +31,21 @@ MTBFile::MTBFile(const std::vector<uint8_t>& file_content) {
 					addr_mtb += 0x84;
 					break;
 				case 0x102: //The names section
+					{
+					unsigned int nb_entries = read_data<unsigned int>(file_content, addr_mtb);
+					unsigned int size_entry = read_data<unsigned int>(file_content, addr_mtb);
+					for (unsigned int i = 0; i < nb_entries; i++) {
+						motion_data ani;
+
+						unsigned int addr_ani = addr_mtb;
+						ani.name = read_string(file_content, addr_mtb);
+						addr_mtb = addr_ani + 0x20;
+						ani.duration = read_data<unsigned int>(file_content, addr_mtb);
+						ani.start = read_data<unsigned int>(file_content, addr_mtb);
+						ani.end = read_data<unsigned int>(file_content, addr_mtb);
+						this->data.push_back(ani);
+					}
+					break; }
 				case 0x10B: {
 					unsigned int nb_entries = read_data<unsigned int>(file_content, addr_mtb);
 					unsigned int size_entry = read_data<unsigned int>(file_content, addr_mtb);
@@ -59,6 +74,7 @@ MTBFile::MTBFile(const std::vector<uint8_t>& file_content) {
 						unsigned int size_entry = read_data<unsigned int>(file_content, addr_mtb);
 						addr_mtb += size_entry;
 					}
+					
 					break;
 				}
 				case 0x10D:
@@ -72,8 +88,12 @@ MTBFile::MTBFile(const std::vector<uint8_t>& file_content) {
 				{
 					unsigned int nb_entries = read_data<unsigned int>(file_content, addr_mtb);
 					unsigned int size_entry = read_data<unsigned int>(file_content, addr_mtb);
-					unsigned int total_size_in_bytes = nb_entries * size_entry;
-					addr_mtb += total_size_in_bytes;
+					for (unsigned int i = 0; i < nb_entries; i++) {
+						unsigned int addr_bone = addr_mtb;
+						bones.push_back(read_string(file_content, addr_mtb));
+						addr_mtb = addr_bone + size_entry;
+					}
+					std::cout << "Number of bones: " << std::hex << bones.size()<< std::endl;
 					break;
 				}
 				case 0x117: 

@@ -1,11 +1,12 @@
 #pragma once
 #include "IT3File.h"
-
+#include "MTBFile.h"
+#include "Scene.h"
 class FBXExporter
 {
 public:
 	FBXExporter();
 	~FBXExporter();
-	void GenerateScene(IT3File file);
+	void ExportScene(Scene scene);
 };
 

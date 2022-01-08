@@ -6,9 +6,9 @@
 #include <fstream>
 #include "DataBlock.h"
 #include <map>
+#include "MTBFile.h"
 
-
-class node {
+class chunk {
 public:
 	unsigned int addr = 0;
 
@@ -27,11 +27,11 @@ public:
 	std::vector<ITP> itp;
 	VPAX * vpax = NULL;
 
-	node() = default;
-	node(unsigned int addr) :addr(addr) {}
+	chunk() = default;
+	chunk(unsigned int addr) :addr(addr) {}
 
 	void output_data();
-
+	
 	std::string to_string();
 
 	
@@ -43,8 +43,9 @@ class IT3File
 public:
 	IT3File(const std::vector<uint8_t> &file_content);
 	~IT3File();
-	std::map<std::string,node> nodes;
+	std::map<std::string, chunk> chunks;
 	std::string to_string();
+	void output_data(MTBFile mtb);
 	void output_data();
 	void add_kan7_from_m_file(IT3File m_file);
 };

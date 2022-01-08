@@ -63,8 +63,9 @@ class INFO : public data {
 public:
 	INFO() = default;
 	std::string text_id1, text_id2, text_id3;
-	matrix4 transform;
 	vector3<float> v0;
+	matrix4 transform;
+	
 
 	INFO(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t size);
 
@@ -165,7 +166,7 @@ struct texture {
 		uint6 = read_data<unsigned int>(file_content, addr);
 	}
 };
-struct material {
+struct material_data {
 	std::string name;
 	std::vector<texture> textures;
 	std::vector<vector4<float>> parameters;
@@ -179,7 +180,7 @@ public:
 	std::vector <int> int0s;
 	std::vector <DataBlock> matm;
 	unsigned int MATM_flags, MATE_flags;
-	std::vector<material> mats;
+	std::vector<material_data> mats;
 	//0x6d1165
 	MAT6(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t size);
 
@@ -188,13 +189,13 @@ public:
 
 };
 
-
-struct bone {
+struct bone_data {
 	std::string name;
 	matrix4 offset_matrix;
-	bone() = default;
-	bone(std::string name, matrix4 mat) : name(name), offset_matrix(mat) {}
+	bone_data() = default;
+	bone_data(std::string name, matrix4 mat) : name(name), offset_matrix(mat) {}
 };
+
 class BON3 : public data {
 public:
 	BON3() = default;
@@ -202,7 +203,7 @@ public:
 	int int0, int1;
 	std::string mesh_name;
 	std::vector<std::string> joints_names; 
-	std::unordered_map<std::string, bone> bones;
+	std::unordered_map<std::string, bone_data> bones;
 	std::vector<DataBlock> matms;
 	BON3(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t size);
 
@@ -210,12 +211,24 @@ public:
 	void output_data(std::string node_name);
 
 };
-struct kan {
+struct key_animation {
+	vector3<float> position;
+	vector4<float> rotation;
+	vector4<float> rotation2;
+	vector3<float> scale;
 	
-	matrix4 floats;
-	unsigned int vertex_idx;
+	unsigned int tick;
 	unsigned int something;
-
+	key_animation(const std::vector<uint8_t>& file_content, unsigned int& addr) {
+		position = read_data < vector3<float>>(file_content, addr);
+		addr += 4;
+		rotation = read_data<vector4<float>>(file_content, addr);
+		rotation2 = read_data<vector4<float>>(file_content, addr);
+		scale = read_data < vector3<float>>(file_content, addr);
+		addr += 4;
+		tick = read_data<unsigned int>(file_content, addr);
+		something = read_data<unsigned int>(file_content, addr);
+	}
 };
 class KAN7 : public data {
 public:
@@ -224,7 +237,7 @@ public:
 	int int0;
 	unsigned int things[0x28 / 4];
 	std::vector<std::vector<DataBlock>> matms;
-	std::vector<std::vector<kan>> kans;
+	std::vector<std::vector<key_animation>> kans;
 	KAN7(const std::vector<uint8_t>& file_content, unsigned int& addr, size_t size);
 
 

@@ -12,7 +12,7 @@ except it's a group of chunks of different types, all unique*/
 IT3File::IT3File(const std::vector<uint8_t>& file_content)
 {
 	unsigned int current_addr = 0;
-	node current_node(current_addr + 4);
+	chunk current_chunk(current_addr + 4);
 	bool started = false;
 	while (current_addr < file_content.size()) {
 
@@ -24,53 +24,53 @@ IT3File::IT3File(const std::vector<uint8_t>& file_content)
 			if (!started)
 				started = true;
 			else
-				this->nodes[current_node.info->text_id1] = current_node;
+				this->chunks[current_chunk.info->text_id1] = current_chunk;
 
-			current_node = node(current_addr); //reset
-			current_node.info = new INFO(file_content, current_addr, size);
+			current_chunk = chunk(current_addr); //reset
+			current_chunk.info = new INFO(file_content, current_addr, size);
 			break;
 		case RTY2_ID:
-			current_node.rty2 = new RTY2(file_content, current_addr, size);
+			current_chunk.rty2 = new RTY2(file_content, current_addr, size);
 			break;
 		case LIG3_ID:
-			current_node.lig3 = new LIG3(file_content, current_addr, size);
+			current_chunk.lig3 = new LIG3(file_content, current_addr, size);
 			break;
 		case INFZ_ID:
-			current_node.infz = new INFZ(file_content, current_addr, size);
+			current_chunk.infz = new INFZ(file_content, current_addr, size);
 			break;
 		case BBOX_ID:
-			current_node.bbox = new BBOX(file_content, current_addr, size);
+			current_chunk.bbox = new BBOX(file_content, current_addr, size);
 			break;
 		case CHID_ID:
-			current_node.chid = new CHID(file_content, current_addr, size);
+			current_chunk.chid = new CHID(file_content, current_addr, size);
 			break;
 		case JNTV_ID:
-			current_node.jntv = new JNTV(file_content, current_addr, size);
+			current_chunk.jntv = new JNTV(file_content, current_addr, size);
 			break;
 		case MAT6_ID:
-			current_node.mat6 = new MAT6(file_content, current_addr, size);
+			current_chunk.mat6 = new MAT6(file_content, current_addr, size);
 			break;
 		case BON3_ID:
-			current_node.bon3 = new BON3(file_content, current_addr, size);
+			current_chunk.bon3 = new BON3(file_content, current_addr, size);
 			break;
 		case TEXI_ID:
-			current_node.texi.push_back(TEXI(file_content, current_addr, size));
+			current_chunk.texi.push_back(TEXI(file_content, current_addr, size));
 			break;
 		case TEX2_ID:
-			current_node.tex2.push_back(TEX2(file_content, current_addr, size));
+			current_chunk.tex2.push_back(TEX2(file_content, current_addr, size));
 			break;
 		case ITP_ID:
 			current_addr -= 8; //removing the "size" and identifier, since in the case of pure ITP files, there is no size after the four cc
-			current_node.itp.push_back(ITP(file_content, current_addr, "test"));
+			current_chunk.itp.push_back(ITP(file_content, current_addr, "test"));
 			break;
 		case VPAX_ID:
-			current_node.vpax = new VPAX(file_content, current_addr, current_node.info->text_id1, 1);
+			current_chunk.vpax = new VPAX(file_content, current_addr, current_chunk.info->text_id1, 1);
 			break;
 		case VP11_ID:
-			current_node.vpax = new VPAX(file_content, current_addr, current_node.info->text_id1, 2);
+			current_chunk.vpax = new VPAX(file_content, current_addr, current_chunk.info->text_id1, 2);
 			break;
 		case KAN7_ID:
-			current_node.kan7 = new KAN7(file_content, current_addr, size);
+			current_chunk.kan7 = new KAN7(file_content, current_addr, size);
 			break;
 		default:
 			current_addr += size;
@@ -82,13 +82,13 @@ IT3File::IT3File(const std::vector<uint8_t>& file_content)
 
 	}
 	if (started)
-		this->nodes[current_node.info->text_id1] = current_node;
+		this->chunks[current_chunk.info->text_id1] = current_chunk;
 }
 
 
 std::string IT3File::to_string() {
 	std::string str = "";
-	for (auto it : this->nodes) {
+	for (auto it : this->chunks) {
 		
 		str = str + it.second.to_string() + "\n";
 	}
@@ -96,21 +96,32 @@ std::string IT3File::to_string() {
 }
 
 void IT3File::output_data() {
-	for (auto it : this->nodes) {
+	for (auto it : this->chunks) {
 		//std::cout << id_to_ascii(chunk.FourCC) << " addr: " << std::hex << chunk.addr << std::endl;
 		it.second.output_data();
 	}
 
 	std::cout << "Generating scene. " << std::endl;
 	FBXExporter exporter;
-	exporter.GenerateScene(*this);
+	//exporter.GenerateScene(*this);
 }
+
+void IT3File::output_data(MTBFile mtb) {
+	for (auto it : this->chunks) {
+		//std::cout << id_to_ascii(chunk.FourCC) << " addr: " << std::hex << chunk.addr << std::endl;
+		it.second.output_data();
+	}
+
+}
+
+
 
 IT3File::~IT3File()
 {
 }
 
-void node::output_data() {
+
+void chunk::output_data() {
 	if (info){
 		info->output_data(info->text_id1);
 		if (rty2)
@@ -148,10 +159,10 @@ void node::output_data() {
 	}
 }
 
-std::string node::to_string() {
+std::string chunk::to_string() {
 	std::string result = "";
 	if (info)
-		result = "node:" + info->text_id1 +"\n";
+		result = "chunk:" + info->text_id1 +"\n";
 		result = result + "INFO ";
 	if (rty2)
 		result = result + "RTY2 ";
@@ -186,12 +197,12 @@ std::string node::to_string() {
 
 void IT3File::add_kan7_from_m_file(IT3File m_file) {
 
-	for (auto it : m_file.nodes) {
+	for (auto it : m_file.chunks) {
 		//std::cout << id_to_ascii(chunk.FourCC) << " addr: " << std::hex << chunk.addr << std::endl;
-		std::string node_name = it.second.info->text_id1;
+		std::string chunk_name = it.second.info->text_id1;
 		if (it.second.kan7) {
-			if (this->nodes.count(node_name) == 1) {
-				this->nodes[node_name].kan7 = it.second.kan7;
+			if (this->chunks.count(chunk_name) == 1) {
+				this->chunks[chunk_name].kan7 = it.second.kan7;
 			}
 		
 		}
