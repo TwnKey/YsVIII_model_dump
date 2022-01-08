@@ -103,10 +103,148 @@ aiMaterial* guess_material_from_mat_struct(material mat, unsigned int variant) {
 	return material;
 }
 
+void recur_setting_offset_matrix(aiNode* currentNode, std::map<std::string, std::vector<aiBone*>> bones_map, aiMatrix4x4 CurrentTransform) {
+	std::string name_current_node = currentNode->mName.C_Str();
+	aiMatrix4x4 NewTransform = CurrentTransform * currentNode->mTransformation;
+	if (bones_map.count(name_current_node) > 0) {
+		std::ofstream f;
+		f.open("InversesBindMatrixes.txt", std::ios::app);
+		f << "Name: " << name_current_node << std::endl;
+		aiMatrix4x4 new_mat = NewTransform;
+		std::string result = "";
+		result = result + std::to_string(new_mat.a1) + ", " + std::to_string(new_mat.a2) + ", " + std::to_string(new_mat.a3) + ", " + std::to_string(new_mat.a4) + "\n";
+		result = result + std::to_string(new_mat.b1) + ", " + std::to_string(new_mat.b2) + ", " + std::to_string(new_mat.b3) + ", " + std::to_string(new_mat.b4) + "\n";
+		result = result + std::to_string(new_mat.c1) + ", " + std::to_string(new_mat.c2) + ", " + std::to_string(new_mat.c3) + ", " + std::to_string(new_mat.c4) + "\n";
+		result = result + std::to_string(new_mat.d1) + ", " + std::to_string(new_mat.d2) + ", " + std::to_string(new_mat.d3) + ", " + std::to_string(new_mat.d4) + "\n";
+		result = result + "\n";
+		f << result << std::endl;
+		f.close();
+		for (aiBone* current_bone : bones_map[name_current_node]) {
+			current_bone->mOffsetMatrix = new_mat.Inverse();
+		}
+		
+
+	}
+
+	if (currentNode->mNumChildren != 0) {
+
+		for (unsigned int idx_child = 0; idx_child < currentNode->mNumChildren; idx_child++) {
+
+			recur_setting_offset_matrix(currentNode->mChildren[idx_child], bones_map, NewTransform);
+		}
+
+	}
 
 
+}
+bool GetWorldTransform(aiNode* currentNode, aiMatrix4x4 CurrentTransform, std::string node_name, aiMatrix4x4 &result) {
+	std::string name_current_node = currentNode->mName.C_Str();
+	aiMatrix4x4 NewTransform = CurrentTransform * currentNode->mTransformation;
+	if (name_current_node.compare(node_name) == 0) {
+		result = NewTransform;
+		return true;
+	}
+		
+	else {
+		if (currentNode->mNumChildren != 0) {
+
+			for (unsigned int idx_child = 0; idx_child < currentNode->mNumChildren; idx_child++) {
+				bool r = GetWorldTransform(currentNode->mChildren[idx_child], NewTransform, node_name, result);
+				if (r) {
+					return true;
+				}
+			}
+
+		}
+	}
+	return false;
+
+	
+
+	
+
+
+}
+
+void get_components(aiMatrix4x4 mat) {
+
+
+
+aiVector3t< float> scaling_bp;
+aiQuaterniont< float > rotation_bp;
+aiVector3t< float > position_bp;
+
+mat.Decompose(scaling_bp, rotation_bp, position_bp);
+std::cout << "scaling: " << scaling_bp.x << ", " << scaling_bp.y << ", " << scaling_bp.z << std::endl;
+std::cout << "rotation: " << rotation_bp.w << ", " << rotation_bp.x << ", " << rotation_bp.y << ", " << rotation_bp.z << std::endl;
+std::cout << "position: " << position_bp.x << ", " << position_bp.y << ", " << position_bp.z << std::endl;
+}
 void FBXExporter::ExportScene(Scene scene){
 	
+	aiMatrix4x4 transform_root = aiMatrix4x4(1, 0, 0, 0,
+		0, 1, 0, 0,
+		0, 0, 1, 0, 
+		0, 0, 0, 1);
+	aiMatrix4x4 transform_NULL_ALL = aiMatrix4x4(1, 0, 0, 0,
+												0, 1, 0, 0,
+												0, 0, 1, 0,
+												0, 0.000144, 1.2, 1);
+
+	aiMatrix4x4 transform_Bone_root = aiMatrix4x4(0, 0, 1, 0,
+		0, 1, 0, 0,
+		-1, 0, 0, 0,
+		0, 0, -0.061861, 1);
+
+	aiMatrix4x4 transform_Bone_upper01 = aiMatrix4x4(1, 0, 0, 0,
+		0, 1, 0, 0,
+		0, 0, 1, 0,
+		0.027422, 0, 0, 1);
+
+	transform_Bone_upper01 = transform_Bone_upper01.FromEulerAnglesXYZ(3.14, 3.14, 3.14);
+
+
+	std::cout << scene.simple_nodes["Null_ALL"].transform.to_string() << std::endl;
+	std::cout << scene.bones["Bone_root"]->transform.to_string() << std::endl;
+	std::cout << scene.bones["Bone_upper01"]->transform.to_string() << std::endl;
+	
+	aiMatrix4x4 global_transform = transform_Bone_upper01;
+	global_transform = global_transform.Inverse();
+	std::string result = "";
+	matrix4 inverse_bind_pose = scene.bones["Bone_upper01"]->offset_matrix;
+	aiMatrix4x4 aiMat_bp = aiMatrix4x4(inverse_bind_pose.a.x, inverse_bind_pose.a.y, inverse_bind_pose.a.z, inverse_bind_pose.a.t,
+		inverse_bind_pose.b.x, inverse_bind_pose.b.y, inverse_bind_pose.b.z, inverse_bind_pose.b.t,
+		inverse_bind_pose.c.x, inverse_bind_pose.c.y, inverse_bind_pose.c.z, inverse_bind_pose.c.t,
+		inverse_bind_pose.d.x, inverse_bind_pose.d.y, inverse_bind_pose.d.z, inverse_bind_pose.d.t);
+	
+
+	result = result + std::to_string(aiMat_bp.a1) + ", " + std::to_string(aiMat_bp.a2) + ", " + std::to_string(aiMat_bp.a3) + ", " + std::to_string(aiMat_bp.a4) + "\n";
+	result = result + std::to_string(aiMat_bp.b1) + ", " + std::to_string(aiMat_bp.b2) + ", " + std::to_string(aiMat_bp.b3) + ", " + std::to_string(aiMat_bp.b4) + "\n";
+	result = result + std::to_string(aiMat_bp.c1) + ", " + std::to_string(aiMat_bp.c2) + ", " + std::to_string(aiMat_bp.c3) + ", " + std::to_string(aiMat_bp.c4) + "\n";
+	result = result + std::to_string(aiMat_bp.d1) + ", " + std::to_string(aiMat_bp.d2) + ", " + std::to_string(aiMat_bp.d3) + ", " + std::to_string(aiMat_bp.d4) + "\n";
+	result = result + "\n";
+	std::cout << result << std::endl;
+	get_components(aiMat_bp);
+	result = "";
+	result = result + std::to_string(global_transform.a1) + ", " + std::to_string(global_transform.a2) + ", " + std::to_string(global_transform.a3) + ", " + std::to_string(global_transform.a4) + "\n";
+	result = result + std::to_string(global_transform.b1) + ", " + std::to_string(global_transform.b2) + ", " + std::to_string(global_transform.b3) + ", " + std::to_string(global_transform.b4) + "\n";
+	result = result + std::to_string(global_transform.c1) + ", " + std::to_string(global_transform.c2) + ", " + std::to_string(global_transform.c3) + ", " + std::to_string(global_transform.c4) + "\n";
+	result = result + std::to_string(global_transform.d1) + ", " + std::to_string(global_transform.d2) + ", " + std::to_string(global_transform.d3) + ", " + std::to_string(global_transform.d4) + "\n";
+	result = result + "\n";
+	std::cout << result << std::endl;
+	get_components(global_transform);
+	for (auto child : scene.meshes["c000r_main"][0].bones) {
+		std::cout << child.first << std::endl;
+		std::cout << scene.bones[child.first]->offset_matrix.to_string() << std::endl;
+		matrix4 inverse_bind_pose = scene.bones[child.first]->offset_matrix;
+		aiMatrix4x4 aiMat_bp = aiMatrix4x4(inverse_bind_pose.a.x, inverse_bind_pose.a.y, inverse_bind_pose.a.z, inverse_bind_pose.a.t,
+			inverse_bind_pose.b.x, inverse_bind_pose.b.y, inverse_bind_pose.b.z, inverse_bind_pose.b.t,
+			inverse_bind_pose.c.x, inverse_bind_pose.c.y, inverse_bind_pose.c.z, inverse_bind_pose.c.t,
+			inverse_bind_pose.d.x, inverse_bind_pose.d.y, inverse_bind_pose.d.z, inverse_bind_pose.d.t);
+
+		get_components(aiMat_bp);
+	}
+
+
 	size_t nb_meshes_nodes = scene.meshes.size();
 	size_t nb_simple_nodes = scene.simple_nodes.size();
 	size_t nb_materials = scene.mats.size();
@@ -125,6 +263,7 @@ void FBXExporter::ExportScene(Scene scene){
 	
 
 	std::map<std::string, aiNode*> map_ptr;
+	std::map<std::string, std::vector<aiBone*>> bones_ptr;
 	std::vector <std::vector<std::string>> children;
 
 	std::unordered_map<unsigned int, unsigned int> mat_id_to_idx;
@@ -144,7 +283,7 @@ void FBXExporter::ExportScene(Scene scene){
 			it_nd.second.transform.c.x, it_nd.second.transform.c.y, it_nd.second.transform.c.z, it_nd.second.transform.c.t,
 			it_nd.second.transform.d.x, it_nd.second.transform.d.y, it_nd.second.transform.d.z, it_nd.second.transform.d.t);
 
-		aiNodes[idx_node]->mTransformation = transform_node; 
+		aiNodes[idx_node]->mTransformation = transform_node.Transpose(); 
 		
 		children.push_back(it_nd.second.children);
 		size_t nb_children = it_nd.second.children.size();
@@ -173,7 +312,7 @@ void FBXExporter::ExportScene(Scene scene){
 			it_msh.second[0].transform.c.x, it_msh.second[0].transform.c.y, it_msh.second[0].transform.c.z, it_msh.second[0].transform.c.t,
 			it_msh.second[0].transform.d.x, it_msh.second[0].transform.d.y, it_msh.second[0].transform.d.z, it_msh.second[0].transform.d.t);
 
-		aiNodes[idx_node]->mTransformation = transform_node;
+		aiNodes[idx_node]->mTransformation = transform_node.Transpose();
 		aiNodes[idx_node]->mMeshes = new unsigned int[it_msh.second.size()];
 		aiNodes[idx_node]->mNumMeshes = it_msh.second.size();
 		unsigned int count_mesh_within_node = 0;
@@ -236,10 +375,9 @@ void FBXExporter::ExportScene(Scene scene){
 					mat.c.x, mat.c.y, mat.c.z, mat.c.t,
 					mat.d.x, mat.d.y, mat.d.z, mat.d.t);
 				bones[count_bones]->mName = it_b.second.name;
-				std::cout << "Created bone: " << bones[count_bones]->mName.C_Str() << std::endl;
-				bones[count_bones]->mOffsetMatrix = aiMat; 
-
-				aiVector3t< float> scaling;
+				bones[count_bones]->mOffsetMatrix = aiMat;
+				bones_ptr[bones[count_bones]->mName.C_Str()].push_back(bones[count_bones]);
+				/*aiVector3t< float> scaling;
 				aiQuaterniont< float > rotation;
 				aiVector3t< float > position;
 				aiMat.Decompose(scaling, rotation, position);
@@ -248,7 +386,7 @@ void FBXExporter::ExportScene(Scene scene){
 				std::cout << "scaling " << scaling.x << ", " << scaling.y << ", " << scaling.z << std::endl << std::endl;
 
 				std::cout << "inverse bind matrix: " << std::endl;
-				std::cout << mat.to_string() << std::endl;
+				std::cout << mat.to_string() << std::endl;*/
 
 				count_bones++;
 			}
@@ -279,81 +417,7 @@ void FBXExporter::ExportScene(Scene scene){
 		}
 		idx_node++;
 	}
-	aiAnimation** animations = new aiAnimation * [scene.anis.size()];
-	unsigned int id_ani = 0;
-	for (auto ani_ : scene.anis) {//mtb.data.size()
-
-		
-		aiAnimation* ani = new aiAnimation;
-		ani->mDuration = ani_.second.duration;
-		ani->mName = ani_.second.name;
-		ani->mTicksPerSecond = ani_.second.ticks_per_second;
-		aiNodeAnim** ani_nodes = new aiNodeAnim * [ani_.second.bones_data.size()];
-		unsigned int bone_node_id = 0;
-		for (auto it_nd : ani_.second.bones_data) {
-			aiNodeAnim* node_ani = new aiNodeAnim();
-			std::string current_bone = it_nd.first;
-			
-			std::vector<key_frame> keys = it_nd.second;
-
-			std::vector<aiVectorKey> position_keys;
-			std::vector<aiQuatKey> rotation_keys;
-			std::vector<aiVectorKey> scaling_keys;
-
-			aiVector3t< float> scaling;
-			aiQuaterniont< float > rotation;
-			aiVector3t< float > position;
-			//aiMat.Decompose(scaling, rotation, position);
-
-			if (!keys.empty()) {
-				double first_key = keys[0].tick;
-				std::ofstream f;
-				f.open("debugkan7.txt", std::ios::app);
-				f << "Name: " << current_bone << std::endl;
-				for (auto key : keys) {
-
-					aiVector3D pos = aiVector3D(key.position.x, key.position.y, key.position.z);
-					aiVector3D scaling = aiVector3D(key.scaling.x, key.scaling.y, key.scaling.z);
-
-
-					f << "Time: " << key.tick - first_key << " " << scaling.x << ", " << scaling.y << ", " << scaling.z << std::endl;
-					position_keys.push_back(aiVectorKey(key.tick - first_key, pos));
-				
-			
-					rotation_keys.push_back(aiQuatKey(key.tick - first_key, aiQuaternion(key.rotation.x, key.rotation.y, key.rotation.z)));
-			
-					scaling_keys.push_back(aiVectorKey(key.tick - first_key, aiVector3D(scaling.x, scaling.y, scaling.z)));
-			
-
-
-				}
-				f.close();
-			}
-			node_ani->mNodeName = current_bone;
-			node_ani->mNumPositionKeys = position_keys.size();
-			node_ani->mNumRotationKeys = rotation_keys.size();
-			node_ani->mNumScalingKeys = scaling_keys.size();
-
-			node_ani->mPositionKeys = new aiVectorKey[node_ani->mNumPositionKeys];
-			node_ani->mRotationKeys = new aiQuatKey[node_ani->mNumRotationKeys];
-			node_ani->mScalingKeys = new aiVectorKey[node_ani->mNumScalingKeys];
-
-			memcpy(node_ani->mPositionKeys, position_keys.data(), node_ani->mNumPositionKeys * sizeof(aiVectorKey));
-			memcpy(node_ani->mRotationKeys, rotation_keys.data(), node_ani->mNumRotationKeys * sizeof(aiQuatKey));
-			memcpy(node_ani->mScalingKeys, scaling_keys.data(), node_ani->mNumScalingKeys * sizeof(aiVectorKey));
-
-
-			ani_nodes[bone_node_id] = node_ani;
-			bone_node_id++;
-			
-
-		}
-		ani->mChannels = ani_nodes;
-		ani->mNumChannels = bone_node_id;
-
-		animations[id_ani] = ani;
-		id_ani++;
-	}
+	
 
 	//now we need to organize them.
 
@@ -370,9 +434,169 @@ void FBXExporter::ExportScene(Scene scene){
 		for (unsigned int i = 0; i < children_.size(); i++){
 
 			current_node->mChildren[i] = map_ptr[children_[i]];
+			map_ptr[children_[i]]->mParent = current_node;
 		}
 	}
 	
+	recur_setting_offset_matrix(rootNode, bones_ptr, aiMatrix4x4());
+	/*
+	for (aiBone* b_ptr : bones_ptr) {
+		aiNode* current_node = map_ptr[b_ptr->mName.C_Str()];
+		aiMatrix4x4 global_transform = current_node->mTransformation;
+		while (current_node->mParent != NULL) {
+			aiMatrix4x4 local_transform = current_node->mParent->mTransformation;
+			/*std::cout << " parent " << current_node->mParent->mName.C_Str() << std::endl;
+			std::string result = "";
+			result = result + std::to_string(local_transform.a1) + ", " + std::to_string(local_transform.a2) + ", " + std::to_string(local_transform.a3) + ", " + std::to_string(local_transform.a4) + "\n";
+			result = result + std::to_string(local_transform.b1) + ", " + std::to_string(local_transform.b2) + ", " + std::to_string(local_transform.b3) + ", " + std::to_string(local_transform.b4) + "\n";
+			result = result + std::to_string(local_transform.c1) + ", " + std::to_string(local_transform.c2) + ", " + std::to_string(local_transform.c3) + ", " + std::to_string(local_transform.c4) + "\n";
+			result = result + std::to_string(local_transform.d1) + ", " + std::to_string(local_transform.d2) + ", " + std::to_string(local_transform.d3) + ", " + std::to_string(local_transform.d4) + "\n";
+			result = result + "\n";
+			std::cout << result << std::endl;
+
+
+			global_transform = local_transform * global_transform;
+			current_node = current_node->mParent;
+
+		}
+		global_transform = global_transform.Inverse();
+		b_ptr->mOffsetMatrix = global_transform;
+		
+	}*/
+	
+	aiAnimation** animations = new aiAnimation * [scene.anis.size()];
+	unsigned int id_ani = 0;
+	for (auto ani_ : scene.anis) {//mtb.data.size()
+
+
+		aiAnimation* ani = new aiAnimation;
+		ani->mDuration = ani_.second.duration;
+		ani->mName = ani_.second.name;
+		ani->mTicksPerSecond = ani_.second.ticks_per_second;
+		size_t nb_of_bones_with_ibm = scene.bones.size();
+
+		aiNodeAnim** ani_nodes = new aiNodeAnim * [nb_of_bones_with_ibm];
+
+		unsigned int count_bones_with_ibm = 0;
+		for (auto it_nd : ani_.second.bones_data) {
+			std::string current_bone = it_nd.first;
+			aiNode* current_node = map_ptr[current_bone];
+			if (scene.bones.count(current_bone) > 0)
+			{
+				aiNodeAnim* node_ani = new aiNodeAnim();
+
+
+				std::vector<key_frame> keys = it_nd.second;
+
+				std::vector<aiVectorKey> position_keys;
+				std::vector<aiQuatKey> rotation_keys;
+				std::vector<aiVectorKey> scaling_keys;
+
+				aiVector3t< float> scaling;
+				aiQuaterniont< float > rotation;
+				aiVector3t< float > position;
+				//aiMat.Decompose(scaling, rotation, position);
+
+
+				//matrix4 inverse_bind_pose = scene.bones[current_bone]->offset_matrix;
+
+				aiVector3t< float> scaling_bp;
+				aiQuaterniont< float > rotation_bp;
+				aiVector3t< float > position_bp;
+				/*aiMatrix4x4 aiMat_bp = aiMatrix4x4(inverse_bind_pose.a.x, inverse_bind_pose.a.y, inverse_bind_pose.a.z, inverse_bind_pose.a.t,
+					inverse_bind_pose.b.x, inverse_bind_pose.b.y, inverse_bind_pose.b.z, inverse_bind_pose.b.t,
+					inverse_bind_pose.c.x, inverse_bind_pose.c.y, inverse_bind_pose.c.z, inverse_bind_pose.c.t,
+					inverse_bind_pose.d.x, inverse_bind_pose.d.y, inverse_bind_pose.d.z, inverse_bind_pose.d.t);*/
+				aiMatrix4x4 world;
+				bool result = GetWorldTransform(rootNode, aiMatrix4x4(), current_bone, world);
+
+				std::ofstream f;
+				f.open("WorldTransforms.txt", std::ios::app);
+				f << "Name: " << current_bone << std::endl;
+				aiMatrix4x4 new_mat = world;
+				std::string result_str = "";
+				result_str = result_str + std::to_string(new_mat.a1) + ", " + std::to_string(new_mat.a2) + ", " + std::to_string(new_mat.a3) + ", " + std::to_string(new_mat.a4) + "\n";
+				result_str = result_str + std::to_string(new_mat.b1) + ", " + std::to_string(new_mat.b2) + ", " + std::to_string(new_mat.b3) + ", " + std::to_string(new_mat.b4) + "\n";
+				result_str = result_str + std::to_string(new_mat.c1) + ", " + std::to_string(new_mat.c2) + ", " + std::to_string(new_mat.c3) + ", " + std::to_string(new_mat.c4) + "\n";
+				result_str = result_str + std::to_string(new_mat.d1) + ", " + std::to_string(new_mat.d2) + ", " + std::to_string(new_mat.d3) + ", " + std::to_string(new_mat.d4) + "\n";
+				result_str = result_str + "\n";
+				f << result_str << std::endl;
+				f.close();
+
+
+				aiMatrix4x4 test = world * bones_ptr[current_bone][0]->mOffsetMatrix;
+
+				if (result)
+					world.Decompose(scaling_bp, rotation_bp, position_bp);
+
+				/*scaling_bp.x = 1;
+				scaling_bp.y = 1;
+				scaling_bp.z = 1;
+
+				position_bp.x = 0;
+				position_bp.y = 0;
+				position_bp.z = 0;
+
+				rotation_bp.w = 1;
+				rotation_bp.x = 0;
+				rotation_bp.y = 0;
+				rotation_bp.z = 0;*/
+
+				if (!keys.empty()) {
+					double first_key = keys[0].tick;
+					std::ofstream f;
+					f.open("debugkan7.txt", std::ios::app);
+					f << "Name: " << current_bone << std::endl;
+					for (auto key : keys) {
+
+						aiVector3D pos = position_bp;//+ aiVector3D(key.position.x, key.position.y, key.position.z);
+						aiVector3D scaling = scaling_bp;// +aiVector3D(key.scaling.x, key.scaling.y, key.scaling.z);
+						aiQuaternion rotation = rotation_bp;// *aiQuaternion(key.rotation.x, key.rotation.y, key.rotation.z);
+
+						f << "Time: " << key.tick - first_key << " " << pos.x << ", " << pos.y << ", " << pos.z << std::endl;
+						f << "" << key.tick - first_key << " " << scaling.x << ", " << scaling.y << ", " << scaling.z << std::endl;
+						f << "" << key.tick - first_key << " " << rotation.w << " " << rotation.x << ", " << rotation.y << ", " << rotation.z << std::endl;
+						position_keys.push_back(aiVectorKey(key.tick - first_key, pos));
+
+
+						rotation_keys.push_back(aiQuatKey(key.tick - first_key, rotation));
+
+						scaling_keys.push_back(aiVectorKey(key.tick - first_key, scaling));
+
+
+
+					}
+					f.close();
+				}
+				node_ani->mNodeName = current_bone;
+				node_ani->mNumPositionKeys = position_keys.size();
+				node_ani->mNumRotationKeys = rotation_keys.size();
+				node_ani->mNumScalingKeys = scaling_keys.size();
+
+				node_ani->mPositionKeys = new aiVectorKey[node_ani->mNumPositionKeys];
+				node_ani->mRotationKeys = new aiQuatKey[node_ani->mNumRotationKeys];
+				node_ani->mScalingKeys = new aiVectorKey[node_ani->mNumScalingKeys];
+
+				memcpy(node_ani->mPositionKeys, position_keys.data(), node_ani->mNumPositionKeys * sizeof(aiVectorKey));
+				memcpy(node_ani->mRotationKeys, rotation_keys.data(), node_ani->mNumRotationKeys * sizeof(aiQuatKey));
+				memcpy(node_ani->mScalingKeys, scaling_keys.data(), node_ani->mNumScalingKeys * sizeof(aiVectorKey));
+
+
+				ani_nodes[count_bones_with_ibm] = node_ani;
+				count_bones_with_ibm++;
+			}
+		}
+		if (count_bones_with_ibm > 0) {
+			ani->mChannels = ani_nodes;
+			ani->mNumChannels = count_bones_with_ibm;
+			animations[id_ani] = ani;
+			id_ani++;
+		}
+
+
+
+	}
+
 
 	aiScene *out = new aiScene();                       // deleted: by us after use
 	out->mNumMeshes = real_nb_of_meshes;
@@ -394,7 +618,7 @@ void FBXExporter::ExportScene(Scene scene){
 		std::cout << desc->description << " " << desc->id << std::endl;
 	}
 	//exporter.Export(out, "objnomtl", "model.obj");
-	exporter.Export(out, "collada",  "model.dae");
+	exporter.Export(out, "glb2",  "model.glb");
 	//}
 	//catch (std::exception e) {
 		//std::cout << "FAIL: " << e.what() << std::endl;
@@ -404,6 +628,9 @@ void FBXExporter::ExportScene(Scene scene){
 	//delete out;
 
 }
+
+
+
 FBXExporter::FBXExporter()
 {
 	

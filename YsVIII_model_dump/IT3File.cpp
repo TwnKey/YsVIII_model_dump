@@ -18,7 +18,7 @@ IT3File::IT3File(const std::vector<uint8_t>& file_content)
 
 		unsigned int FourCC = read_data<unsigned int>(file_content, current_addr);
 		size_t size = read_data<uint32_t>(file_content, current_addr);
-		std::cout << id_to_ascii(FourCC) << " " << std::hex << size << std::endl;
+		//std::cout << id_to_ascii(FourCC) << " " << std::hex << size << std::endl;
 		switch (FourCC) {
 		case INFO_ID:
 			if (!started)

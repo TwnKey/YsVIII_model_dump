@@ -26,8 +26,17 @@ Scene::Scene(IT3File it3_p, IT3File it3_m, MTBFile mtb) {
 			simple_node nd = simple_node(current_info->text_id1, current_info->transform);
 
 			if (current_chid) {
-				for (auto name : current_chid->children)
-					nd.children.push_back(name);
+				std::cout << "CHILDREN!! " << current_info->text_id1 << std::endl;
+				for (auto name : current_chid->children) {
+					
+
+						std::cout << " " << name << std::endl;
+
+						nd.children.push_back(name);
+					
+					
+				}
+					
 			}
 
 			simple_nodes[current_info->text_id1] = nd;
@@ -91,6 +100,12 @@ Scene::Scene(IT3File it3_p, IT3File it3_m, MTBFile mtb) {
 					INFO* bone_info = it3_p.chunks[b.second.name].info;
 					m.bones[b.second.name].transform = bone_info->transform;
 					m.bones[b.second.name].offset_matrix = current_bone->bones[b.second.name].offset_matrix;
+					if (b.second.name.compare("Bone_bag_cloth") == 0)
+					{
+						std::cout << "Bone_bag_cloth!! " << m.name << std::endl;
+						std::cout << m.bones[b.second.name].offset_matrix.to_string() << std::endl;
+					}
+					bones[b.second.name] = &m.bones[b.second.name];
 				}
 
 				if (current_mat6) {
@@ -112,8 +127,13 @@ Scene::Scene(IT3File it3_p, IT3File it3_m, MTBFile mtb) {
 				}
 
 				if (current_chid) {
-					for (auto name : current_chid->children)
+					for (auto name : current_chid->children) {
+						
+							std::cout << "CHILDREN!! " << current_info->text_id1 << " " << name << std::endl;
+						
 						m.children.push_back(name);
+					}
+						
 				}
 				
 				meshes[current_info->text_id1].push_back(m);

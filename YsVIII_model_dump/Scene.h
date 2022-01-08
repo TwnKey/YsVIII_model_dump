@@ -76,6 +76,6 @@ public:
 	std::map<std::string, std::vector<mesh>> meshes; //node name
 	std::map<std::string, animation> anis; //animation name
 	std::map<unsigned int, material> mats;
-
+	std::map<std::string, bone *> bones;
 };
 

@@ -343,9 +343,9 @@ BON3::BON3(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t 
 		addr_bone = addr_start + 0x40;
 	}
 	addr_bone = 0;
-	while (addr_bone < matm[1].content.size()) {
+	while (addr_bone < matm[0].content.size()) {
 		unsigned int addr_start = addr_bone;
-		std::string name = read_string(matm[1].content, addr_bone);
+		std::string name = read_string(matm[0].content, addr_bone);
 		addr_bone = addr_start;
 		if (name.compare("") != 0){
 			matrix4 offset_mat = read_data<matrix4>(matm[2].content, addr_bone);
