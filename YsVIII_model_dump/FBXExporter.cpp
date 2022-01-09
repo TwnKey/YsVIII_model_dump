@@ -322,18 +322,24 @@ void FBXExporter::ExportScene(Scene scene){
 
 			nb_bones = mesh_.bones.size();
 			unsigned int count_bones = 0;
+
+			
 			for (auto it_b : mesh_.bones) {
 				bones[count_bones] = new aiBone();
 				bones[count_bones]->mNumWeights = it_b.second.weights.size();
 				bones[count_bones]->mWeights = new aiVertexWeight[bones[count_bones]->mNumWeights]();
-
+				
 				for (unsigned int idx_w = 0; idx_w < bones[count_bones]->mNumWeights; idx_w++) {
+
 
 					aiVertexWeight weight;
 					weight.mWeight = it_b.second.weights[idx_w];
 					weight.mVertexId = it_b.second.idx_v[idx_w];
+
+					vector3<float> pos = mesh_.vertices[weight.mVertexId];
+
+					
 					bones[count_bones]->mWeights[idx_w] = weight;
-					idx_w++;
 				}
 				matrix4 mat = it_b.second.offset_matrix;
 				aiMatrix4x4 aiMat = aiMatrix4x4(mat.a.x, mat.a.y, mat.a.z, mat.a.t,
