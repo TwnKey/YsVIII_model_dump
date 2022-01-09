@@ -453,8 +453,8 @@ void FBXExporter::ExportScene(Scene scene){
 		for (auto it_nd : ani_.second.bones_data) {
 			std::string current_bone = it_nd.first;
 			aiNode* current_node = map_ptr[current_bone];
-			if (scene.bones.count(current_bone) > 0)
-			{
+			//if (scene.bones.count(current_bone) > 0)
+			//{
 				aiNodeAnim* node_ani = new aiNodeAnim();
 
 
@@ -483,20 +483,21 @@ void FBXExporter::ExportScene(Scene scene){
 
 			
 
-				aiMatrix4x4 test = current_node->mTransformation * bones_ptr[current_bone][0]->mOffsetMatrix;
-				aiMatrix4x4 test2 = current_node->mTransformation * bones_ptr[current_bone][0]->mOffsetMatrix;
-
+				
 				aiMatrix4x4 bind_pos = current_node->mTransformation;
 
 				
 				/*if the parent of the bone is not a part of the bone hierarchy, it seems I need the global transform, I don't know
-				if that is how things are or if I did something wrong, but hopefully it works all the time*/
+				if that is how things are or if I did something wrong, but hopefully it works all the time
+				Actually it doesnt work in dae because the whole hierarchy seemed fucked?
+				
+				*/
 
-				if (bones_ptr.count(current_node->mParent->mName.C_Str()) == 0) {
+				/*if (bones_ptr.count(current_node->mParent->mName.C_Str()) == 0) {
 					aiMatrix4x4 world;
 					GetWorldTransform(rootNode, aiMatrix4x4(), current_bone, world);
 					bind_pos = world;
-				}
+				}*/
 
 				bind_pos.Decompose(scaling_bp, rotation_bp, position_bp);
 				
@@ -506,11 +507,16 @@ void FBXExporter::ExportScene(Scene scene){
 					std::ofstream f;
 					f.open("debugkan7.txt", std::ios::app);
 					f << "Name: " << current_bone << std::endl;
+
+					aiMatrix4x4 world;
+					GetWorldTransform(rootNode, aiMatrix4x4(), current_bone, world);
+
+
 					for (auto key : keys) {
 						
-						aiVector3D pos = position_bp;// +aiVector3D(key.position.x, key.position.y, key.position.z);
-						aiVector3D scaling = scaling_bp;// + aiVector3D(key.scaling.x, key.scaling.y, key.scaling.z);
-						aiQuaternion rotation = rotation_bp;// * aiQuaternion(key.rotation.x, key.rotation.y, key.rotation.z);
+						aiVector3D pos = position_bp;// aiVector3D(key.position.x, key.position.y, key.position.z);
+						aiVector3D scaling = scaling_bp;//aiVector3D(key.scaling.x, key.scaling.y, key.scaling.z);
+						aiQuaternion rotation = rotation_bp;//aiQuaternion(key.rotation.x, key.rotation.y, key.rotation.z, key.rotation.t);
 
 						f << "Time: " << key.tick - first_key << " " << pos.x << ", " << pos.y << ", " << pos.z << std::endl;
 						f << "" << key.tick - first_key << " " << scaling.x << ", " << scaling.y << ", " << scaling.z << std::endl;
@@ -540,7 +546,7 @@ void FBXExporter::ExportScene(Scene scene){
 
 				ani_nodes[count_bones_with_ibm] = node_ani;
 				count_bones_with_ibm++;
-			}
+				//}
 		}
 		if (count_bones_with_ibm > 0) {
 			ani->mChannels = ani_nodes;
