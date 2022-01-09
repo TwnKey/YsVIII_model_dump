@@ -50,7 +50,7 @@ Scene::Scene(IT3File it3_p, IT3File it3_m, MTBFile mtb) {
 
 			for (auto mesh_ : current_vpax->meshes_d) {
 				mesh m(current_info->text_id1, current_info->transform);
-				
+				std::cout << "MESH: " << current_info->text_id1 << std::endl;
 				for (unsigned int idx_v = 0; idx_v < mesh_.vertices.size(); idx_v++)
 				{
 					vector3<float> vertices;
@@ -66,7 +66,7 @@ Scene::Scene(IT3File it3_p, IT3File it3_m, MTBFile mtb) {
 					m.vertices.push_back(vertices);
 					m.uv.push_back(uv);
 
-
+					float linear_sum = 0;
 					for (unsigned int idx_weight = 0; idx_weight < 8; idx_weight++) {
 						uint8_t weight = mesh_.vertices[idx_v].weights[idx_weight];
 						float weight_f = (float)weight / 255;
@@ -76,11 +76,17 @@ Scene::Scene(IT3File it3_p, IT3File it3_m, MTBFile mtb) {
 							std::string joint_name = current_bone->joints_names[joint_id];
 							m.bones[joint_name].name = joint_name;
 							m.bones[joint_name].weights.push_back(weight_f);
+							linear_sum += weight_f;
 							m.bones[joint_name].idx_v.push_back(idx_v);
+							if (vertices.x == 0.294542) {
+								std::cout << joint_name << std::endl;
+								std::cout << weight_f << std::endl;
+								std::cout << vertices.x << " " << vertices.y << " " << vertices.z << std::endl;
+							}
 						}
-
+						
 					}
-
+					
 				}
 
 				size_t nb_faces = mesh_.indexes.size() / 3; // each face has 3 vertices?
@@ -166,11 +172,11 @@ Scene::Scene(IT3File it3_p, IT3File it3_m, MTBFile mtb) {
 
 					
 					vector3<float> position_keys;
-					vector3<float> rotation_keys;
+					vector4<float> rotation_keys;
 					vector3<float> scaling_keys;
 
 					position_keys = { key.position.x, key.position.y, key.position.z };
-					rotation_keys = { key.rotation.x, key.rotation.y, key.rotation.z };
+					rotation_keys = { key.rotation.x, key.rotation.y, key.rotation.z, key.rotation.t };
 					scaling_keys = { key.scale.x, key.scale.y, key.scale.z };
 					key_frame kf(key.tick, position_keys, rotation_keys, scaling_keys);
 					ani.bones_data[it_nd.second.info->text_id1].push_back(kf);

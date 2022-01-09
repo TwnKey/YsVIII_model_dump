@@ -52,9 +52,9 @@ struct mesh : node {
 struct key_frame {
 	unsigned int tick;
 	vector3<float> position;
-	vector3<float> rotation;
+	vector4<float> rotation;
 	vector3<float> scaling;
-	key_frame(unsigned int tick, vector3<float> p, vector3<float> r, vector3<float> s) : tick(tick), position(p), rotation(r), scaling(s) {}
+	key_frame(unsigned int tick, vector3<float> p, vector4<float> r, vector3<float> s) : tick(tick), position(p), rotation(r), scaling(s) {}
 };
 struct animation {
 	std::string name;

@@ -181,69 +181,6 @@ std::cout << "position: " << position_bp.x << ", " << position_bp.y << ", " << p
 }
 void FBXExporter::ExportScene(Scene scene){
 	
-	aiMatrix4x4 transform_root = aiMatrix4x4(1, 0, 0, 0,
-		0, 1, 0, 0,
-		0, 0, 1, 0, 
-		0, 0, 0, 1);
-	aiMatrix4x4 transform_NULL_ALL = aiMatrix4x4(1, 0, 0, 0,
-												0, 1, 0, 0,
-												0, 0, 1, 0,
-												0, 0.000144, 1.2, 1);
-
-	aiMatrix4x4 transform_Bone_root = aiMatrix4x4(0, 0, 1, 0,
-		0, 1, 0, 0,
-		-1, 0, 0, 0,
-		0, 0, -0.061861, 1);
-
-	aiMatrix4x4 transform_Bone_upper01 = aiMatrix4x4(1, 0, 0, 0,
-		0, 1, 0, 0,
-		0, 0, 1, 0,
-		0.027422, 0, 0, 1);
-
-	transform_Bone_upper01 = transform_Bone_upper01.FromEulerAnglesXYZ(3.14, 3.14, 3.14);
-
-
-	std::cout << scene.simple_nodes["Null_ALL"].transform.to_string() << std::endl;
-	std::cout << scene.bones["Bone_root"]->transform.to_string() << std::endl;
-	std::cout << scene.bones["Bone_upper01"]->transform.to_string() << std::endl;
-	
-	aiMatrix4x4 global_transform = transform_Bone_upper01;
-	global_transform = global_transform.Inverse();
-	std::string result = "";
-	matrix4 inverse_bind_pose = scene.bones["Bone_upper01"]->offset_matrix;
-	aiMatrix4x4 aiMat_bp = aiMatrix4x4(inverse_bind_pose.a.x, inverse_bind_pose.a.y, inverse_bind_pose.a.z, inverse_bind_pose.a.t,
-		inverse_bind_pose.b.x, inverse_bind_pose.b.y, inverse_bind_pose.b.z, inverse_bind_pose.b.t,
-		inverse_bind_pose.c.x, inverse_bind_pose.c.y, inverse_bind_pose.c.z, inverse_bind_pose.c.t,
-		inverse_bind_pose.d.x, inverse_bind_pose.d.y, inverse_bind_pose.d.z, inverse_bind_pose.d.t);
-	
-
-	result = result + std::to_string(aiMat_bp.a1) + ", " + std::to_string(aiMat_bp.a2) + ", " + std::to_string(aiMat_bp.a3) + ", " + std::to_string(aiMat_bp.a4) + "\n";
-	result = result + std::to_string(aiMat_bp.b1) + ", " + std::to_string(aiMat_bp.b2) + ", " + std::to_string(aiMat_bp.b3) + ", " + std::to_string(aiMat_bp.b4) + "\n";
-	result = result + std::to_string(aiMat_bp.c1) + ", " + std::to_string(aiMat_bp.c2) + ", " + std::to_string(aiMat_bp.c3) + ", " + std::to_string(aiMat_bp.c4) + "\n";
-	result = result + std::to_string(aiMat_bp.d1) + ", " + std::to_string(aiMat_bp.d2) + ", " + std::to_string(aiMat_bp.d3) + ", " + std::to_string(aiMat_bp.d4) + "\n";
-	result = result + "\n";
-	std::cout << result << std::endl;
-	get_components(aiMat_bp);
-	result = "";
-	result = result + std::to_string(global_transform.a1) + ", " + std::to_string(global_transform.a2) + ", " + std::to_string(global_transform.a3) + ", " + std::to_string(global_transform.a4) + "\n";
-	result = result + std::to_string(global_transform.b1) + ", " + std::to_string(global_transform.b2) + ", " + std::to_string(global_transform.b3) + ", " + std::to_string(global_transform.b4) + "\n";
-	result = result + std::to_string(global_transform.c1) + ", " + std::to_string(global_transform.c2) + ", " + std::to_string(global_transform.c3) + ", " + std::to_string(global_transform.c4) + "\n";
-	result = result + std::to_string(global_transform.d1) + ", " + std::to_string(global_transform.d2) + ", " + std::to_string(global_transform.d3) + ", " + std::to_string(global_transform.d4) + "\n";
-	result = result + "\n";
-	std::cout << result << std::endl;
-	get_components(global_transform);
-	for (auto child : scene.meshes["c000r_main"][0].bones) {
-		std::cout << child.first << std::endl;
-		std::cout << scene.bones[child.first]->offset_matrix.to_string() << std::endl;
-		matrix4 inverse_bind_pose = scene.bones[child.first]->offset_matrix;
-		aiMatrix4x4 aiMat_bp = aiMatrix4x4(inverse_bind_pose.a.x, inverse_bind_pose.a.y, inverse_bind_pose.a.z, inverse_bind_pose.a.t,
-			inverse_bind_pose.b.x, inverse_bind_pose.b.y, inverse_bind_pose.b.z, inverse_bind_pose.b.t,
-			inverse_bind_pose.c.x, inverse_bind_pose.c.y, inverse_bind_pose.c.z, inverse_bind_pose.c.t,
-			inverse_bind_pose.d.x, inverse_bind_pose.d.y, inverse_bind_pose.d.z, inverse_bind_pose.d.t);
-
-		get_components(aiMat_bp);
-	}
-
 
 	size_t nb_meshes_nodes = scene.meshes.size();
 	size_t nb_simple_nodes = scene.simple_nodes.size();
@@ -260,6 +197,35 @@ void FBXExporter::ExportScene(Scene scene){
 	aiMesh** aimeshes = new aiMesh * [real_nb_of_meshes];
 	aiMaterial** aimaterials = new aiMaterial * [nb_materials];
 
+	
+	//check the weights
+	for (auto mesh : scene.meshes) {
+		
+		for (auto m : mesh.second) {
+			std::map<unsigned int, float> map_weights;
+			for (auto b : m.bones) {
+				for (unsigned int idx_v = 0; idx_v < b.second.idx_v.size(); idx_v++) {
+					map_weights[b.second.idx_v[idx_v]] += b.second.weights[idx_v];
+					if (map_weights[b.second.idx_v[idx_v]] > 1.2)
+					{
+						std::cout << "oh" << std::endl;
+					}
+				}
+					
+
+			}
+			for (auto w : map_weights) {
+				if (w.second < 0.5)
+					std::cout << "ATTENTION" << w.second << std::endl;
+
+			}
+			
+
+
+		}
+		
+	
+	}
 	
 
 	std::map<std::string, aiNode*> map_ptr;
@@ -375,7 +341,7 @@ void FBXExporter::ExportScene(Scene scene){
 					mat.c.x, mat.c.y, mat.c.z, mat.c.t,
 					mat.d.x, mat.d.y, mat.d.z, mat.d.t);
 				bones[count_bones]->mName = it_b.second.name;
-				bones[count_bones]->mOffsetMatrix = aiMat;
+				//bones[count_bones]->mOffsetMatrix = aiMat;
 				bones_ptr[bones[count_bones]->mName.C_Str()].push_back(bones[count_bones]);
 				/*aiVector3t< float> scaling;
 				aiQuaterniont< float > rotation;
@@ -507,40 +473,27 @@ void FBXExporter::ExportScene(Scene scene){
 					inverse_bind_pose.b.x, inverse_bind_pose.b.y, inverse_bind_pose.b.z, inverse_bind_pose.b.t,
 					inverse_bind_pose.c.x, inverse_bind_pose.c.y, inverse_bind_pose.c.z, inverse_bind_pose.c.t,
 					inverse_bind_pose.d.x, inverse_bind_pose.d.y, inverse_bind_pose.d.z, inverse_bind_pose.d.t);*/
-				aiMatrix4x4 world;
-				bool result = GetWorldTransform(rootNode, aiMatrix4x4(), current_bone, world);
+				
 
-				std::ofstream f;
-				f.open("WorldTransforms.txt", std::ios::app);
-				f << "Name: " << current_bone << std::endl;
-				aiMatrix4x4 new_mat = world;
-				std::string result_str = "";
-				result_str = result_str + std::to_string(new_mat.a1) + ", " + std::to_string(new_mat.a2) + ", " + std::to_string(new_mat.a3) + ", " + std::to_string(new_mat.a4) + "\n";
-				result_str = result_str + std::to_string(new_mat.b1) + ", " + std::to_string(new_mat.b2) + ", " + std::to_string(new_mat.b3) + ", " + std::to_string(new_mat.b4) + "\n";
-				result_str = result_str + std::to_string(new_mat.c1) + ", " + std::to_string(new_mat.c2) + ", " + std::to_string(new_mat.c3) + ", " + std::to_string(new_mat.c4) + "\n";
-				result_str = result_str + std::to_string(new_mat.d1) + ", " + std::to_string(new_mat.d2) + ", " + std::to_string(new_mat.d3) + ", " + std::to_string(new_mat.d4) + "\n";
-				result_str = result_str + "\n";
-				f << result_str << std::endl;
-				f.close();
+			
 
+				aiMatrix4x4 test = current_node->mTransformation * bones_ptr[current_bone][0]->mOffsetMatrix;
+				aiMatrix4x4 test2 = current_node->mTransformation * bones_ptr[current_bone][0]->mOffsetMatrix;
 
-				aiMatrix4x4 test = world * bones_ptr[current_bone][0]->mOffsetMatrix;
+				aiMatrix4x4 bind_pos = current_node->mTransformation;
 
-				if (result)
-					world.Decompose(scaling_bp, rotation_bp, position_bp);
+				
+				/*if the parent of the bone is not a part of the bone hierarchy, it seems I need the global transform, I don't know
+				if that is how things are or if I did something wrong, but hopefully it works all the time*/
 
-				/*scaling_bp.x = 1;
-				scaling_bp.y = 1;
-				scaling_bp.z = 1;
+				if (bones_ptr.count(current_node->mParent->mName.C_Str()) == 0) {
+					aiMatrix4x4 world;
+					GetWorldTransform(rootNode, aiMatrix4x4(), current_bone, world);
+					bind_pos = world;
+				}
 
-				position_bp.x = 0;
-				position_bp.y = 0;
-				position_bp.z = 0;
-
-				rotation_bp.w = 1;
-				rotation_bp.x = 0;
-				rotation_bp.y = 0;
-				rotation_bp.z = 0;*/
+				bind_pos.Decompose(scaling_bp, rotation_bp, position_bp);
+				
 
 				if (!keys.empty()) {
 					double first_key = keys[0].tick;
@@ -548,19 +501,16 @@ void FBXExporter::ExportScene(Scene scene){
 					f.open("debugkan7.txt", std::ios::app);
 					f << "Name: " << current_bone << std::endl;
 					for (auto key : keys) {
-
-						aiVector3D pos = position_bp;//+ aiVector3D(key.position.x, key.position.y, key.position.z);
-						aiVector3D scaling = scaling_bp;// +aiVector3D(key.scaling.x, key.scaling.y, key.scaling.z);
-						aiQuaternion rotation = rotation_bp;// *aiQuaternion(key.rotation.x, key.rotation.y, key.rotation.z);
+						
+						aiVector3D pos = position_bp;// +aiVector3D(key.position.x, key.position.y, key.position.z);
+						aiVector3D scaling = scaling_bp;// + aiVector3D(key.scaling.x, key.scaling.y, key.scaling.z);
+						aiQuaternion rotation = rotation_bp;// * aiQuaternion(key.rotation.x, key.rotation.y, key.rotation.z);
 
 						f << "Time: " << key.tick - first_key << " " << pos.x << ", " << pos.y << ", " << pos.z << std::endl;
 						f << "" << key.tick - first_key << " " << scaling.x << ", " << scaling.y << ", " << scaling.z << std::endl;
 						f << "" << key.tick - first_key << " " << rotation.w << " " << rotation.x << ", " << rotation.y << ", " << rotation.z << std::endl;
 						position_keys.push_back(aiVectorKey(key.tick - first_key, pos));
-
-
 						rotation_keys.push_back(aiQuatKey(key.tick - first_key, rotation));
-
 						scaling_keys.push_back(aiVectorKey(key.tick - first_key, scaling));
 
 
