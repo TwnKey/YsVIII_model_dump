@@ -31,7 +31,7 @@ class data {
 public:
 	data() {};
 	virtual ~data() = default;
-	virtual void output_data(std::string node_name) = 0;
+	virtual void output_data(std::string node_name, std::string scene_folder) = 0;
 	uint32_t id;
 };
 struct BlockDesc {
@@ -48,12 +48,12 @@ public:
 
 	DataBlock() = default;
 
-	unsigned int reading_method; //1 is standard, 2 is hybrid
+	bool is_compressed;
 
 
-	DataBlock(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t sz, unsigned int reading_method, BlockDesc caracs);
+	DataBlock(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t sz, bool compressed, BlockDesc caracs);
 
-	void output_data(std::string node_name);
+	void output_data(std::string node_name, std::string scene_folder);
 
 
 };
@@ -69,7 +69,7 @@ public:
 
 	INFO(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t size);
 
-	void output_data(std::string node_name);
+	void output_data(std::string node_name, std::string scene_folder);
 };
 class RTY2 : public data {
 public:
@@ -82,7 +82,7 @@ public:
 	RTY2(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t size);
 
 
-	void output_data(std::string node_name);
+	void output_data(std::string node_name, std::string scene_folder);
 };
 class LIG3 : public data {
 public:
@@ -96,7 +96,7 @@ public:
 	LIG3(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t size);
 
 
-	void output_data(std::string node_name);
+	void output_data(std::string node_name, std::string scene_folder);
 
 };
 class INFZ : public data {
@@ -108,7 +108,7 @@ public:
 	INFZ(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t size);
 
 
-	void output_data(std::string node_name);
+	void output_data(std::string node_name, std::string scene_folder);
 };
 
 class BBOX : public data {
@@ -123,7 +123,7 @@ public:
 	BBOX(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t size);
 
 
-	void output_data(std::string node_name);
+	void output_data(std::string node_name, std::string scene_folder);
 
 };
 class CHID : public data {
@@ -134,7 +134,7 @@ public:
 	std::vector<std::string> children;
 
 	CHID(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t size);
-	void output_data(std::string node_name);
+	void output_data(std::string node_name, std::string scene_folder);
 
 };
 
@@ -148,18 +148,18 @@ public:
 	JNTV(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t size);
 
 
-	void output_data(std::string node_name);
+	void output_data(std::string node_name, std::string scene_folder);
 
 };
 
 struct texture {
 	std::string name;
 
-	unsigned int texture_type, uint0, uint2, uint3, uint4, uint5, uint6;
+	unsigned int texture_type, uint0, XWrap, uint3, uint4, uint5, uint6;
 	texture(const std::vector<uint8_t>& file_content, unsigned int& addr){
 		uint0 = read_data<unsigned int>(file_content, addr);
 		texture_type = read_data<unsigned int>(file_content, addr);
-		uint2 = read_data<unsigned int>(file_content, addr);
+		XWrap = read_data<unsigned int>(file_content, addr);
 		uint3 = read_data<unsigned int>(file_content, addr);
 		uint4 = read_data<unsigned int>(file_content, addr);
 		uint5 = read_data<unsigned int>(file_content, addr);
@@ -185,7 +185,7 @@ public:
 	MAT6(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t size);
 
 
-	void output_data(std::string node_name);
+	void output_data(std::string node_name, std::string scene_folder);
 
 };
 
@@ -208,26 +208,37 @@ public:
 	BON3(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t size);
 
 
-	void output_data(std::string node_name);
+	void output_data(std::string node_name, std::string scene_folder);
 
 };
 struct key_animation {
-	vector3<float> position;
-	vector4<float> rotation;
-	vector4<float> rotation2;
-	vector3<float> scale;
+	vector4<float> data;
+	vector4<float> no_idea0;
+	vector4<float> no_idea1;
+	vector4<float> no_idea2;
 	
 	unsigned int tick;
 	unsigned int something;
-	key_animation(const std::vector<uint8_t>& file_content, unsigned int& addr) {
-		position = read_data < vector3<float>>(file_content, addr);
-		addr += 4;
-		rotation = read_data<vector4<float>>(file_content, addr);
-		rotation2 = read_data<vector4<float>>(file_content, addr);
-		scale = read_data < vector3<float>>(file_content, addr);
-		addr += 4;
+	unsigned int unit;
+	unsigned int type; //1 is pos, 2 is rot, 3 is scale
+
+	key_animation(const std::vector<uint8_t>& file_content, unsigned int& addr, unsigned int type, unsigned int unit) {
+		data = read_data < vector4<float>>(file_content, addr);
+		
+		no_idea0 = read_data<vector4<float>>(file_content, addr);
+		
+		no_idea1 = read_data<vector4<float>>(file_content, addr);
+		
+		no_idea2 = read_data < vector4<float>>(file_content, addr);
+		
 		tick = read_data<unsigned int>(file_content, addr);
 		something = read_data<unsigned int>(file_content, addr);
+		
+		this->unit = unit;
+		this->type = type;
+	}
+	bool operator<(const key_animation& kan) const { 
+		return tick < kan.tick;
 	}
 };
 class KAN7 : public data {
@@ -241,7 +252,7 @@ public:
 	KAN7(const std::vector<uint8_t>& file_content, unsigned int& addr, size_t size);
 
 
-	void output_data(std::string node_name);
+	void output_data(std::string node_name, std::string scene_folder);
 
 };
 
@@ -274,7 +285,7 @@ public:
 	std::vector<uint8_t> content;
 
 	ITP(const std::vector<uint8_t> &file_content, unsigned int &addr, std::string name);
-	void output_data(std::string node_name);
+	void output_data(std::string node_name, std::string scene_folder);
 	void unswizzle(size_t width, size_t height, size_t blockSize);
 	void add_header();
 };
@@ -290,7 +301,7 @@ public:
 	TEXI(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t size);
 
 
-	void output_data(std::string node_name);
+	void output_data(std::string node_name, std::string scene_folder);
 
 };
 
@@ -304,7 +315,7 @@ public:
 	TEX2(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t size);
 
 
-	void output_data(std::string node_name);
+	void output_data(std::string node_name, std::string scene_folder);
 
 };
 
@@ -326,7 +337,7 @@ struct vertex {
 	unsigned int no_idea5;
 	vector2<float> uv;
 	vector2<float> uv2;
-	vector4<float> no_idea7;
+	vector4<float> uv3;
 	vector4<float> no_idea8;
 	vector4<float> no_idea9;
 	uint8_t weights[8];
@@ -355,6 +366,6 @@ public:
 	VPAX(const std::vector<uint8_t> &file_content, unsigned int &addr, std::string name, int game_version);
 
 
-	void output_data(std::string node_name);
+	void output_data(std::string node_name, std::string scene_folder);
 
 };

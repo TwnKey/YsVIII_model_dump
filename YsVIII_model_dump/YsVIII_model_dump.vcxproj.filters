@@ -24,7 +24,7 @@
     <ClInclude Include="DataBlock.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="FBXExporter.h">
+    <ClInclude Include="DAEExporter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="MTBFile.h">
@@ -47,7 +47,7 @@
     <ClCompile Include="DataBlock.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="FBXExporter.cpp">
+    <ClCompile Include="DAEExporter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MTBFile.cpp">

@@ -3,13 +3,19 @@
 
 MTBFile::MTBFile(const std::vector<uint8_t>& file_content) {
 	unsigned int addr_mtb = 0;
+	unsigned int ver = 8; 
 	std::string magic_str = read_string(file_content, addr_mtb);
 	if (magic_str == "YS7_MTD") {
 		unsigned int version = read_data<unsigned int>(file_content, addr_mtb);
 		if (version >= 0x2000000)
 			addr_mtb += 8;
+		if (version == 0x10000000)
+			ver = 9;
+
+		
 
 		unsigned int count1 = read_data<unsigned int>(file_content, addr_mtb);
+
 		for (unsigned int i = 0; i < count1; i++) {
 			addr_mtb += 6;
 		}
@@ -20,15 +26,25 @@ MTBFile::MTBFile(const std::vector<uint8_t>& file_content) {
 		while (addr_mtb < file_content.size()) {
 			
 			id = read_data<uint16_t>(file_content, addr_mtb);
-			std::cout << std::hex << "ID: " << id << ", addr = " << addr_mtb << std::endl;
+			//std::cout << std::hex << "ID: " << id << ", addr = " << addr_mtb << std::endl;
 			switch (id) {
 				case 0x104:
-					addr_mtb += 0x40;
-					
+					if (ver == 8)
+						addr_mtb += 0x40;
+					else if (ver == 9)
+						addr_mtb += 0x60;
 					break;
 				case 0x110:
+					if (ver == 8)
+						addr_mtb += 0x84;
+					else if (ver == 9)
+						addr_mtb += 0xA4;
+					break;
 				case 0x107:
-					addr_mtb += 0x84;
+					if (ver == 8)
+						addr_mtb += 0x84;
+					else if (ver == 9)
+						addr_mtb += 0xB4;
 					break;
 				case 0x102: //The names section
 					{
@@ -93,7 +109,7 @@ MTBFile::MTBFile(const std::vector<uint8_t>& file_content) {
 						bones.push_back(read_string(file_content, addr_mtb));
 						addr_mtb = addr_bone + size_entry;
 					}
-					std::cout << "Number of bones: " << std::hex << bones.size()<< std::endl;
+					//std::cout << "Number of bones: " << std::hex << bones.size()<< std::endl;
 					break;
 				}
 				case 0x117: 
@@ -203,7 +219,38 @@ MTBFile::MTBFile(const std::vector<uint8_t>& file_content) {
 					unsigned int size_entry = read_data<unsigned int>(file_content, addr_mtb);
 					unsigned int total_size_in_bytes = nb_entries * size_entry;
 					addr_mtb += total_size_in_bytes;
-					std::cout << "Finished last part MTB " << std::endl;
+					//std::cout << "Finished last part MTB " << std::endl;
+					break;
+				}
+				case 0x11F:
+				{
+					unsigned int nb_entries = read_data<unsigned int>(file_content, addr_mtb);
+					unsigned int size_entry = read_data<unsigned int>(file_content, addr_mtb);
+					unsigned int total_size_in_bytes = nb_entries * size_entry;
+					addr_mtb += total_size_in_bytes;
+					break;
+				}
+				case 0x120:
+				{
+					unsigned int nb_entries = read_data<unsigned int>(file_content, addr_mtb);
+					unsigned int size_entry = read_data<unsigned int>(file_content, addr_mtb);
+					unsigned int total_size_in_bytes = nb_entries * size_entry;
+					addr_mtb += total_size_in_bytes;
+					break;
+				}
+				case 0x121:
+				{
+					unsigned int nb_entries = read_data<unsigned int>(file_content, addr_mtb);
+					unsigned int size_entry = read_data<unsigned int>(file_content, addr_mtb);
+					unsigned int total_size_in_bytes = nb_entries * size_entry;
+					addr_mtb += total_size_in_bytes;
+					break;
+				}
+				case 0x122:
+				{
+					
+					unsigned int total_size_in_bytes = 3 * 4;
+					addr_mtb += total_size_in_bytes;
 					break;
 				}
 				default: {

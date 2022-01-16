@@ -2,38 +2,40 @@
 #include "utilities.h"
 #include <fstream>
 #include <iostream>
-#include "FBXExporter.h"
+#include "DAEExporter.h"
 #include "MTBFile.h"
-//I should name it something else because I actually don't know what that is
-size_t get_bpp(size_t id) {
-switch (id) {
-case 0:
-case 1:
-case 2:
-case 7:
-case 8:
-case 10:
-	return 8;
-default:
-	return 0;
-case 4:
-	return 0x10;
-case 5:
-	return 0x20;
-case 6:
-	return 4;
+#include <DirectXTex/DirectXTex.h>
 
+//no idea what it is
+size_t get_something(size_t id) {
+	switch (id) {
+	case 0:
+	case 1:
+	case 2:
+	case 7:
+	case 8:
+	case 10:
+		return 8;
+	default:
+		return 0;
+	case 4:
+		return 0x10;
+	case 5:
+		return 0x20;
+	case 6:
+		return 4;
+
+	}
 }
-}
 
 
 
 
-DataBlock::DataBlock(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t sz, unsigned int reading_method, BlockDesc caracs) {
-	this->reading_method = reading_method;
+DataBlock::DataBlock(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t sz, bool compressed, BlockDesc caracs) {
+	this->is_compressed = compressed;
 	this->caracs = caracs;
 
-	if (reading_method == 2) {
+	if (compressed) {
 
 		unsigned int start = addr;
 		//MATM 6dd4f0
@@ -69,7 +71,7 @@ DataBlock::DataBlock(const std::vector<uint8_t> &file_content, unsigned int &add
 
 }
 
-void DataBlock::output_data(std::string node_name) {
+void DataBlock::output_data(std::string node_name, std::string scene_folder) {
 	std::ofstream OutFile;
 	OutFile.open(node_name, std::ios::out | std::ios::binary);
 	OutFile.write((char*)content.data(), sizeof(char));
@@ -93,13 +95,13 @@ for (size_t idx = 0; idx < mat.v0.x; idx++) {
 	if (type == 8) {
 
 
-		result.push_back(DataBlock(file_content, addr, count - 4, 2, mat));
+		result.push_back(DataBlock(file_content, addr, count - 4, true, mat));
 
 
 	}
 	else
 	{
-		result.push_back(DataBlock(file_content, addr, count - 4, 1, mat));
+		result.push_back(DataBlock(file_content, addr, count - 4, false, mat));
 	}
 }
 return result;
@@ -121,7 +123,7 @@ INFO::INFO(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t 
 	
 }
 
-void INFO::output_data(std::string node_name) {
+void INFO::output_data(std::string node_name, std::string scene_folder) {
 
 	
 }
@@ -133,11 +135,10 @@ RTY2::RTY2(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t 
 }
 
 
-void RTY2::output_data(std::string node_name) {
+void RTY2::output_data(std::string node_name, std::string scene_folder) {
 	if (material_variant != 0){
 	std::ofstream text_file;
 	
-	//text_file.open(node_name + "_MAT6.txt", std::ios_base::app);
 	text_file.open("Liste Variants.txt", std::ios_base::app);
 	text_file << "Material variant: " << material_variant << std::endl;
 	text_file.close();
@@ -157,7 +158,7 @@ LIG3::LIG3(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t 
 }
 
 
-void LIG3::output_data(std::string node_name) {
+void LIG3::output_data(std::string node_name, std::string scene_folder) {
 	
 
 }
@@ -168,7 +169,7 @@ INFZ::INFZ(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t 
 }
 
 
-void INFZ::output_data(std::string node_name) {
+void INFZ::output_data(std::string node_name, std::string scene_folder) {
 }
 
 
@@ -180,7 +181,7 @@ BBOX::BBOX(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t 
 }
 
 
-void BBOX::output_data(std::string node_name) {
+void BBOX::output_data(std::string node_name, std::string scene_folder) {
 }
 
 CHID::CHID(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t size) {
@@ -198,7 +199,7 @@ CHID::CHID(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t 
 }
 
 
-void CHID::output_data(std::string node_name) {
+void CHID::output_data(std::string node_name, std::string scene_folder) {
 }
 
 
@@ -211,7 +212,7 @@ JNTV::JNTV(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t 
 }
 
 
-void JNTV::output_data(std::string node_name) {
+void JNTV::output_data(std::string node_name, std::string scene_folder) {
 }
 
 
@@ -260,7 +261,6 @@ MAT6::MAT6(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t 
 
 		std::vector<std::string> names;
 		for (unsigned int idx_tex = 0; idx_tex < count_tex; idx_tex++){
-		//while ((addr_mat + block_size) <= matm[idx].content.size()) {
 			start_addr = addr_mat;
 			std::string tex_name = read_string(matm[idx].content, addr_mat);
 			names.push_back(tex_name);
@@ -281,7 +281,7 @@ MAT6::MAT6(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t 
 }
 
 
-void MAT6::output_data(std::string node_name) {
+void MAT6::output_data(std::string node_name, std::string scene_folder) {
 	std::ofstream text_file;
 	text_file.open("Liste Variants.txt", std::ios_base::app);
 	//text_file.open(node_name + "_MAT6.txt", std::ios_base::app);
@@ -299,7 +299,7 @@ void MAT6::output_data(std::string node_name) {
 		for (texture tex : mat.textures) {
 			text_file << "Name: " << tex.name << std::endl;
 			text_file << std::hex << "Type: " << tex.texture_type << std::endl;
-			text_file << std::hex << tex.uint0 << " " << tex.uint2 << " " << tex.uint3 << " " << tex.uint4 << " " << tex.uint5 << " " << tex.uint6 << std::endl;
+			text_file << std::hex << tex.uint0 << " " << tex.XWrap << " " << tex.uint3 << " " << tex.uint4 << " " << tex.uint5 << " " << tex.uint6 << std::endl;
 		}
 	}
 	
@@ -343,9 +343,9 @@ BON3::BON3(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t 
 		addr_bone = addr_start + 0x40;
 	}
 	addr_bone = 0;
-	while (addr_bone < matm[0].content.size()) {
+	while (addr_bone < matm[1].content.size()) {
 		unsigned int addr_start = addr_bone;
-		std::string name = read_string(matm[0].content, addr_bone);
+		std::string name = read_string(matm[1].content, addr_bone);
 		addr_bone = addr_start;
 		if (name.compare("") != 0){
 			matrix4 offset_mat = read_data<matrix4>(matm[2].content, addr_bone);
@@ -359,7 +359,7 @@ BON3::BON3(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t 
 }
 
 
-void BON3::output_data(std::string node_name) {
+void BON3::output_data(std::string node_name, std::string scene_folder) {
 	std::ofstream text_file;
 	text_file.open(node_name + "BON3.txt");
 	text_file << "BON3: " << std::endl;
@@ -431,7 +431,7 @@ ITP::ITP(const std::vector<uint8_t> &file_content, unsigned int &addr, std::stri
 							content.insert(content.end(), chk.content.begin(), chk.content.end());
 					}
 					else {
-						size_t content_size = get_bpp(hdr.bpp)  * hdr.dim1 * hdr.dim2;
+						size_t content_size = get_something(hdr.bpp)  * hdr.dim1 * hdr.dim2;
 						
 						content.insert(content.end(), file_content.begin() + addr, file_content.begin() + addr + content_size);
 						addr = addr + content_size;
@@ -476,22 +476,73 @@ void ITP::add_header() {
 	this->content.insert(this->content.begin(), header.begin(), header.end());
 }
 
-void ITP::output_data(std::string node_name) {
-
-	std::ofstream text_file;
-	text_file.open(node_name + ""+ this->name+".txt");
-	text_file << "ITP: " << std::endl; 
-	text_file << "height: " << hdr.dim1 << std::endl;
-	text_file << "width: " << hdr.dim2 << std::endl;
-	text_file.close();
+void ITP::output_data(std::string node_name, std::string scene_folder) {
 
 	
 	this->unswizzle(hdr.dim1, hdr.dim2, 0x10);
 	this->add_header();
 	std::ofstream OutFile;
-	OutFile.open(this->name + ".dds", std::ios::out | std::ios::binary);
+	
+	std::wstring orig_filename = std::wstring(scene_folder.begin(), scene_folder.end()) + L"/" + std::wstring(this->name.begin(), this->name.end()) + L"orig.dds";
+	std::wstring converted_filename = std::wstring(scene_folder.begin(), scene_folder.end()) + L"/" + std::wstring(this->name.begin(), this->name.end()) + L".dds";
+	
+
+	OutFile.open(orig_filename, std::ios::out | std::ios::binary);
+	std::wcout << L"Writing original texture: " << orig_filename << std::endl;
 	OutFile.write((char*)this->content.data(), this->content.size()*sizeof(char));
 	OutFile.close();
+
+	DirectX::TexMetadata info;
+	std::unique_ptr<DirectX::ScratchImage> image(new (std::nothrow) DirectX::ScratchImage);
+
+	
+	DirectX::DDS_FLAGS ddsFlags = DirectX::DDS_FLAGS_ALLOW_LARGE_FILES;
+		
+
+	LoadFromDDSFile(orig_filename.c_str(), ddsFlags, &info, *image);
+		
+
+	DXGI_FORMAT tformat = DXGI_FORMAT_BC3_UNORM; //BC3 for compatibility
+
+	/* default parameters */
+	DirectX::TEX_FILTER_FLAGS dwFilter =		DirectX::TEX_FILTER_DEFAULT;
+	DirectX::TEX_FILTER_FLAGS dwSRGB =			DirectX::TEX_FILTER_DEFAULT;
+	DirectX::TEX_FILTER_FLAGS dwConvert =		DirectX::TEX_FILTER_DEFAULT;
+	DirectX::TEX_COMPRESS_FLAGS dwCompress =	DirectX::TEX_COMPRESS_DEFAULT;
+	DirectX::TEX_FILTER_FLAGS dwFilterOpts =	DirectX::TEX_FILTER_DEFAULT;
+	float alphaThreshold =						DirectX::TEX_THRESHOLD_DEFAULT;
+
+	/* decompression from BC7 */
+	auto img = image->GetImage(0, 0, 0);
+	size_t nimg = image->GetImageCount();
+	std::unique_ptr<DirectX::ScratchImage> timage(new (std::nothrow) DirectX::ScratchImage);
+	HRESULT hr = Decompress(img, nimg, info, DXGI_FORMAT_UNKNOWN, *timage);
+	
+	DirectX::TexMetadata tinfo = timage->GetMetadata();
+	info.format = tinfo.format;
+	image.reset(timage.release());
+
+
+	/* recompression to BC3 */
+	ddsFlags = DirectX::DDS_FLAGS_NONE;
+	img = image->GetImage(0, 0, 0);
+	nimg = image->GetImageCount();
+	DirectX::TEX_COMPRESS_FLAGS cflags = dwCompress;
+	std::unique_ptr<DirectX::ScratchImage> timage2(new (std::nothrow) DirectX::ScratchImage);
+	hr = Compress(img, nimg, info, tformat, cflags | dwSRGB, alphaThreshold, *timage2);
+
+
+	/* Saving the texture */
+	tinfo = timage2->GetMetadata();
+	info.format = tinfo.format;
+	image.swap(timage2);
+	img = image->GetImage(0, 0, 0);
+	nimg = image->GetImageCount();
+	std::wcout << L"Writing BC3 texture: " << converted_filename << std::endl;
+	hr = SaveToDDSFile(img, nimg, info, ddsFlags, converted_filename.c_str());
+	
+
+
 }
 
 //Adapted to C++ from GFD Studio after finding out about it using RawTex tool by daemon1
@@ -577,9 +628,9 @@ TEXI::TEXI(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t 
 }
 
 
-void TEXI::output_data(std::string node_name) {
+void TEXI::output_data(std::string node_name, std::string scene_folder) {
 	
-	itp.output_data(node_name);
+	itp.output_data(node_name, scene_folder);
 }
 
 
@@ -593,9 +644,9 @@ TEX2::TEX2(const std::vector<uint8_t> &file_content, unsigned int &addr, size_t 
 }
 
 
-void TEX2::output_data(std::string node_name) {
+void TEX2::output_data(std::string node_name, std::string scene_folder) {
 
-	itp.output_data(node_name);
+	itp.output_data(node_name, scene_folder);
 }
 
 VPAX::VPAX(const std::vector<uint8_t> &file_content, unsigned int &addr, std::string name, int game_version) {
@@ -606,16 +657,16 @@ VPAX::VPAX(const std::vector<uint8_t> &file_content, unsigned int &addr, std::st
 
 	this->content_indexes.resize(count);
 	this->content_vertices.resize(count);
-	//I think that's the vertices
+	
 	for (unsigned int idx = 0; idx < count; idx++) {
-		size_t sz = read_data<uint32_t>(file_content, addr); //Idk what that is yet.
+		size_t sz = read_data<uint32_t>(file_content, addr); 
 		std::vector<DataBlock> DataBlocks = read_DataBlocks(file_content, addr);
 		for (auto chk : DataBlocks) {
 			content_vertices[idx].insert(content_vertices[idx].end(), chk.content.begin(), chk.content.end());
 		}
 			
 	}
-	//and here the indexes
+	
 	for (unsigned int idx = 0; idx < count; idx++) {
 		size_t sz = read_data<uint32_t>(file_content, addr);
 		std::vector<DataBlock> DataBlocks = read_DataBlocks(file_content, addr);
@@ -679,9 +730,10 @@ VPAX::VPAX(const std::vector<uint8_t> &file_content, unsigned int &addr, std::st
 
 			size_t first_part_sz = mesh.block_size * mesh.nb_blocks; //taille total de la partie des vertices, je pense
 			//le mesh est parsé là: 0x6b2432
-
+			
 			for (unsigned int idx = 0; idx < mesh.nb_blocks; idx++) {
 				vertex v = read_data<vertex>(content_vertices[nb_mesh], addr_vpax);
+				
 				mesh.vertices.push_back(v);
 			}
 
@@ -720,7 +772,7 @@ VPAX::VPAX(const std::vector<uint8_t> &file_content, unsigned int &addr, std::st
 
 
 
-void VPAX::output_data(std::string node_name) {
+void VPAX::output_data(std::string node_name, std::string scene_folder) {
 	for (unsigned int idx_mesh = 0; idx_mesh < meshes_d.size(); idx_mesh++) {
 		std::ofstream OutFile;
 		OutFile.open(name + "_vertices_" + std::to_string(idx_mesh) + ".idx", std::ios::out | std::ios::binary);
@@ -764,6 +816,7 @@ KAN7::KAN7(const std::vector<uint8_t>& file_content, unsigned int& addr, size_t 
 		std::vector<DataBlock> chks = read_DataBlocks(file_content, addr);
 		matms.push_back(chks);
 	}
+	unsigned int count_block = 1;
 	for (auto mats : matms) {
 		std::vector<uint8_t> content;
 		for (auto mat : mats) {
@@ -774,21 +827,24 @@ KAN7::KAN7(const std::vector<uint8_t>& file_content, unsigned int& addr, size_t 
 		unsigned int check = read_data<unsigned int>(content, addr_mat);
 		addr_mat += 4;
 		unsigned int nb_structs = read_data<unsigned int>(content, addr_mat);
-		addr_mat += 0x30;
+		addr_mat += 0x04;
+		unsigned int unit = read_data<unsigned int>(content, addr_mat);
+		addr_mat += 0x28;
 		std::vector<key_animation> current_kan;
 		for (unsigned int i = 0; i < nb_structs; i++) {
-			key_animation k = key_animation(content, addr_mat);
+			key_animation k = key_animation(content, addr_mat, count_block, unit);
 			
 			current_kan.push_back(k);
 		}
 		kans.push_back(current_kan);
+		count_block++;
 		
 
 	}
 }
 
 
-void KAN7::output_data(std::string node_name) {
+void KAN7::output_data(std::string node_name, std::string scene_folder) {
 
 	unsigned int idx = 0;
 	for (auto mats : matms) {

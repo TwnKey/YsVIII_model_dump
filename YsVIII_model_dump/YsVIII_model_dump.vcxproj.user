@@ -9,7 +9,11 @@
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LocalDebuggerCommandArguments>"A:\Games\Ys VIII Lacrimosa of Dana\chr\pc\c000_p.it3" "A:\Games\Ys VIII Lacrimosa of Dana\chr\pc\c000_m.it3" "A:\Games\Ys VIII Lacrimosa of Dana\chr\pc\c000.mtb"</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>"A:\Games\Ys VIII Lacrimosa of Dana\chr\pc\c001_p.it3" "A:\Games\Ys VIII Lacrimosa of Dana\chr\pc\c001_m.it3" "A:\Games\Ys VIII Lacrimosa of Dana\chr\pc\c001.mtb" </LocalDebuggerCommandArguments>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LocalDebuggerCommandArguments>"A:\Games\Ys VIII Lacrimosa of Dana\chr\pc\c002_p.it3" "A:\Games\Ys VIII Lacrimosa of Dana\chr\pc\c002_m.it3" "A:\Games\Ys VIII Lacrimosa of Dana\chr\pc\c002.mtb"</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
 </Project>

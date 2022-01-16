@@ -2,11 +2,8 @@
 #include <memory>
 #include <string>
 #include "DataBlock.h"
-#include "FBXExporter.h"
+#include "DAEExporter.h"
 
-
-/* It looks like the chunk "INFO" is delimiting each entry in the file, and I can't really describe what is an entry
-except it's a group of chunks of different types, all unique*/
 
 
 IT3File::IT3File(const std::vector<uint8_t>& file_content)
@@ -18,7 +15,6 @@ IT3File::IT3File(const std::vector<uint8_t>& file_content)
 
 		unsigned int FourCC = read_data<unsigned int>(file_content, current_addr);
 		size_t size = read_data<uint32_t>(file_content, current_addr);
-		//std::cout << id_to_ascii(FourCC) << " " << std::hex << size << std::endl;
 		switch (FourCC) {
 		case INFO_ID:
 			if (!started)
@@ -95,24 +91,13 @@ std::string IT3File::to_string() {
 	return str;
 }
 
-void IT3File::output_data() {
+void IT3File::output_data(std::string scene_folder) {
 	for (auto it : this->chunks) {
-		//std::cout << id_to_ascii(chunk.FourCC) << " addr: " << std::hex << chunk.addr << std::endl;
-		it.second.output_data();
+		it.second.output_data(scene_folder);
 	}
-
-	std::cout << "Generating scene. " << std::endl;
-	FBXExporter exporter;
-	//exporter.GenerateScene(*this);
 }
 
-void IT3File::output_data(MTBFile mtb) {
-	for (auto it : this->chunks) {
-		//std::cout << id_to_ascii(chunk.FourCC) << " addr: " << std::hex << chunk.addr << std::endl;
-		it.second.output_data();
-	}
 
-}
 
 
 
@@ -121,41 +106,41 @@ IT3File::~IT3File()
 }
 
 
-void chunk::output_data() {
+void chunk::output_data(std::string scene_folder) {
 	if (info){
-		info->output_data(info->text_id1);
-		if (rty2)
-			rty2->output_data(info->text_id1);
+		//info->output_data(info->text_id1, scene_folder);
+		/*if (rty2)
+			rty2->output_data(info->text_id1, scene_folder);
 		if (lig3)
-			lig3->output_data(info->text_id1);
+			lig3->output_data(info->text_id1, scene_folder);
 		if (infz)
-			infz->output_data(info->text_id1);
+			infz->output_data(info->text_id1, scene_folder);
 		if (bbox)
-			bbox->output_data(info->text_id1);
+			bbox->output_data(info->text_id1, scene_folder);
 		if (chid)
-			chid->output_data(info->text_id1);
+			chid->output_data(info->text_id1, scene_folder);
 		if (jntv)
-			jntv->output_data(info->text_id1);
+			jntv->output_data(info->text_id1, scene_folder);
 		if (mat6)
-			mat6->output_data(info->text_id1);
+			mat6->output_data(info->text_id1, scene_folder);
 		if (bon3)
-			bon3->output_data(info->text_id1);
+			bon3->output_data(info->text_id1, scene_folder);*/
 		if (!texi.empty()) {
 			for (auto tex : texi)
-				tex.output_data(info->text_id1);
+				tex.output_data(info->text_id1, scene_folder);
 		}
 		if (!tex2.empty()) {
 			for (auto tex : tex2)
-				tex.output_data(info->text_id1);
+				tex.output_data(info->text_id1, scene_folder);
 		}
 		if (!itp.empty()) {
 			for (auto tp : itp)
-				tp.output_data(info->text_id1);
+				tp.output_data(info->text_id1, scene_folder);
 		}
-		if (vpax)
-			vpax->output_data(info->text_id1);
+		/*if (vpax)
+			vpax->output_data(info->text_id1, scene_folder);
 		if (kan7)
-			kan7->output_data(info->text_id1);
+			kan7->output_data(info->text_id1, scene_folder);*/
 	}
 }
 
@@ -198,9 +183,10 @@ std::string chunk::to_string() {
 void IT3File::add_kan7_from_m_file(IT3File m_file) {
 
 	for (auto it : m_file.chunks) {
-		//std::cout << id_to_ascii(chunk.FourCC) << " addr: " << std::hex << chunk.addr << std::endl;
+		//
 		std::string chunk_name = it.second.info->text_id1;
 		if (it.second.kan7) {
+			
 			if (this->chunks.count(chunk_name) == 1) {
 				this->chunks[chunk_name].kan7 = it.second.kan7;
 			}

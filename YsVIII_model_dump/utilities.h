@@ -3,6 +3,7 @@
 #include <iostream>
 #include <string>
 
+
 template<typename T>
 struct vector4 {
 	T x;

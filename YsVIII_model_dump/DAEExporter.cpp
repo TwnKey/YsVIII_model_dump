@@ -1,4 +1,4 @@
-#include "FBXExporter.h"
+#include "DAEExporter.h"
 #include <assimp\scene.h>
 #include <assimp\Exporter.hpp>
 #include <iostream>
@@ -28,36 +28,38 @@ void assign_property_based_on_name(aiMaterial& mat_to_update, material mat) {
 		name.Set(mat.textures_paths[idx_tex]);
 
 
-		size_t idx = mat.textures_paths[idx_tex].find_last_of("_");
+		//size_t idx = mat.textures_paths[idx_tex].find_last_of("_");
+		size_t idx = mat.textures_paths[idx_tex].find_last_of("0123456789");
 		if (idx != std::string::npos) {
-			std::string suffix = mat.textures_paths[idx_tex].substr(idx + 1);
-
-			//removing all numbers from the suffix, ex 01n becomes n, t1 becomes t, but i'm not sure if t means anything actually
-			suffix.erase(std::remove_if(std::begin(suffix), std::end(suffix),
-				[](auto ch) { return std::isdigit(ch); }),
-				suffix.end());
+			std::string suffix = mat.textures_paths[idx_tex].substr(idx + 1, 1);
 
 			aiTextureType type;
-
-			if (suffix.compare("n") == 0)
+			int channel;
+			if (suffix.compare("n") == 0) {
+				channel = 1;
 				type = aiTextureType_NORMALS;
-			else if (suffix.compare("s") == 0)
+			}
+				
+			else if (suffix.compare("s") == 0) {
+				channel = 0;
 				type = aiTextureType_SPECULAR;
+			}
+				
 			else
+			{
+				channel = 0;
 				type = aiTextureType_DIFFUSE;
+			}
+				
 
 			size_t nb_tex = mat_to_update.GetTextureCount(type);
 			mat_to_update.AddProperty(&name, AI_MATKEY_TEXTURE(type, nb_tex));
 			aiTextureMapping mapping = aiTextureMapping_UV;
 			mat_to_update.AddProperty<int>((int *)&mapping,1, AI_MATKEY_MAPPING(type, nb_tex));
 
-			/*aiTextureMapMode Wrap = aiTextureMapMode_Wrap;
-			mat_to_update.AddProperty<int>((int*)&Wrap, 1, AI_MATKEY_MAPPINGMODE_U(type, nb_tex));
-			mat_to_update.AddProperty<int>((int*)&Wrap, 1, AI_MATKEY_MAPPINGMODE_V(type, nb_tex));*/
-
-			int channel = 0;//They all use the same channel, I believe (same set of coordinates in the vertice part of VPAX)
 			mat_to_update.AddProperty<int>((int*)&channel, 1, AI_MATKEY_UVWSRC(type, nb_tex));
 			
+
 		}
 
 
@@ -107,18 +109,8 @@ void recur_setting_offset_matrix(aiNode* currentNode, std::map<std::string, std:
 	std::string name_current_node = currentNode->mName.C_Str();
 	aiMatrix4x4 NewTransform = CurrentTransform * currentNode->mTransformation;
 	if (bones_map.count(name_current_node) > 0) {
-		std::ofstream f;
-		f.open("InversesBindMatrixes.txt", std::ios::app);
-		f << "Name: " << name_current_node << std::endl;
 		aiMatrix4x4 new_mat = NewTransform;
-		std::string result = "";
-		result = result + std::to_string(new_mat.a1) + ", " + std::to_string(new_mat.a2) + ", " + std::to_string(new_mat.a3) + ", " + std::to_string(new_mat.a4) + "\n";
-		result = result + std::to_string(new_mat.b1) + ", " + std::to_string(new_mat.b2) + ", " + std::to_string(new_mat.b3) + ", " + std::to_string(new_mat.b4) + "\n";
-		result = result + std::to_string(new_mat.c1) + ", " + std::to_string(new_mat.c2) + ", " + std::to_string(new_mat.c3) + ", " + std::to_string(new_mat.c4) + "\n";
-		result = result + std::to_string(new_mat.d1) + ", " + std::to_string(new_mat.d2) + ", " + std::to_string(new_mat.d3) + ", " + std::to_string(new_mat.d4) + "\n";
-		result = result + "\n";
-		f << result << std::endl;
-		f.close();
+		
 		for (aiBone* current_bone : bones_map[name_current_node]) {
 			current_bone->mOffsetMatrix = new_mat.Inverse();
 		}
@@ -137,6 +129,36 @@ void recur_setting_offset_matrix(aiNode* currentNode, std::map<std::string, std:
 
 
 }
+
+void recur_setting_offset_matrix_2(aiNode* currentNode, std::map<std::string, std::vector<mesh>> meshes_map, std::map<std::string, std::vector<aiBone*>> bones_map, aiMatrix4x4 CurrentTransform) {
+	std::string name_current_node = currentNode->mName.C_Str();
+	aiMatrix4x4 NewTransform = CurrentTransform * currentNode->mTransformation;
+	if (meshes_map.count(name_current_node) > 0) {
+		NewTransform = aiMatrix4x4();
+	}
+	if (bones_map.count(name_current_node) > 0) {
+		aiMatrix4x4 new_mat = NewTransform;
+		
+		for (aiBone* current_bone : bones_map[name_current_node]) {
+			current_bone->mOffsetMatrix = new_mat.Inverse();
+		}
+
+
+	}
+
+	if (currentNode->mNumChildren != 0) {
+
+		for (unsigned int idx_child = 0; idx_child < currentNode->mNumChildren; idx_child++) {
+
+			recur_setting_offset_matrix(currentNode->mChildren[idx_child], bones_map, NewTransform);
+		}
+
+	}
+
+
+}
+
+
 bool GetWorldTransform(aiNode* currentNode, aiMatrix4x4 CurrentTransform, std::string node_name, aiMatrix4x4 &result) {
 	std::string name_current_node = currentNode->mName.C_Str();
 	aiMatrix4x4 NewTransform = CurrentTransform * currentNode->mTransformation;
@@ -166,20 +188,8 @@ bool GetWorldTransform(aiNode* currentNode, aiMatrix4x4 CurrentTransform, std::s
 
 }
 
-void get_components(aiMatrix4x4 mat) {
 
-
-
-aiVector3t< float> scaling_bp;
-aiQuaterniont< float > rotation_bp;
-aiVector3t< float > position_bp;
-
-mat.Decompose(scaling_bp, rotation_bp, position_bp);
-std::cout << "scaling: " << scaling_bp.x << ", " << scaling_bp.y << ", " << scaling_bp.z << std::endl;
-std::cout << "rotation: " << rotation_bp.w << ", " << rotation_bp.x << ", " << rotation_bp.y << ", " << rotation_bp.z << std::endl;
-std::cout << "position: " << position_bp.x << ", " << position_bp.y << ", " << position_bp.z << std::endl;
-}
-void FBXExporter::ExportScene(Scene scene){
+void DAEExporter::ExportScene(Scene scene){
 	
 
 	size_t nb_meshes_nodes = scene.meshes.size();
@@ -197,36 +207,6 @@ void FBXExporter::ExportScene(Scene scene){
 	aiMesh** aimeshes = new aiMesh * [real_nb_of_meshes];
 	aiMaterial** aimaterials = new aiMaterial * [nb_materials];
 
-	
-	//check the weights
-	for (auto mesh : scene.meshes) {
-		
-		for (auto m : mesh.second) {
-			std::map<unsigned int, float> map_weights;
-			for (auto b : m.bones) {
-				for (unsigned int idx_v = 0; idx_v < b.second.idx_v.size(); idx_v++) {
-					map_weights[b.second.idx_v[idx_v]] += b.second.weights[idx_v];
-					if (map_weights[b.second.idx_v[idx_v]] > 1.2)
-					{
-						std::cout << "oh" << std::endl;
-					}
-				}
-					
-
-			}
-			for (auto w : map_weights) {
-				if (w.second < 0.5)
-					std::cout << "ATTENTION" << w.second << std::endl;
-
-			}
-			
-
-
-		}
-		
-	
-	}
-	
 
 	std::map<std::string, aiNode*> map_ptr;
 	std::map<std::string, std::vector<aiBone*>> bones_ptr;
@@ -242,7 +222,6 @@ void FBXExporter::ExportScene(Scene scene){
 
 		aiNodes[idx_node] = new aiNode();
 		aiNodes[idx_node]->mName = it_nd.second.name;
-		std::cout << aiNodes[idx_node]->mName.C_Str() << std::endl;
 		map_ptr[aiNodes[idx_node]->mName.C_Str()] = aiNodes[idx_node];
 		aiMatrix4x4 transform_node = aiMatrix4x4(it_nd.second.transform.a.x, it_nd.second.transform.a.y, it_nd.second.transform.a.z, it_nd.second.transform.a.t,
 			it_nd.second.transform.b.x, it_nd.second.transform.b.y, it_nd.second.transform.b.z, it_nd.second.transform.b.t,
@@ -263,7 +242,7 @@ void FBXExporter::ExportScene(Scene scene){
 	unsigned int count_materials = 0;
 	unsigned int count_mesh = 0;
 	for (auto it_msh : scene.meshes) {
-
+		
 		aiNodes[idx_node] = new aiNode();
 		aiNodes[idx_node]->mName = it_msh.first;
 		map_ptr[aiNodes[idx_node]->mName.C_Str()] = aiNodes[idx_node];
@@ -289,17 +268,24 @@ void FBXExporter::ExportScene(Scene scene){
 
 			aimeshes[count_mesh]->mVertices = new aiVector3D[mesh_.vertices.size()];
 			aimeshes[count_mesh]->mNumUVComponents[0] = 2;
+			aimeshes[count_mesh]->mNumUVComponents[1] = 2;
+			 
 			aimeshes[count_mesh]->mTextureCoords[0] = new aiVector3D[mesh_.vertices.size()];
-			
+			aimeshes[count_mesh]->mTextureCoords[1] = new aiVector3D[mesh_.vertices.size()];
+
 			for (unsigned int idx_v = 0; idx_v < mesh_.vertices.size(); idx_v++)
 			{
 				aimeshes[count_mesh]->mVertices[idx_v].x = mesh_.vertices[idx_v].x;
 				aimeshes[count_mesh]->mVertices[idx_v].y = mesh_.vertices[idx_v].y;
 				aimeshes[count_mesh]->mVertices[idx_v].z = mesh_.vertices[idx_v].z;
 
-				aimeshes[count_mesh]->mTextureCoords[0][idx_v].x = abs(mesh_.vertices[idx_v].x);
-				aimeshes[count_mesh]->mTextureCoords[0][idx_v].y = abs(1 - mesh_.vertices[idx_v].y);
+				aimeshes[count_mesh]->mTextureCoords[0][idx_v].x = mesh_.uv[idx_v].x;
+				aimeshes[count_mesh]->mTextureCoords[0][idx_v].y = mesh_.uv[idx_v].y;
 				aimeshes[count_mesh]->mTextureCoords[0][idx_v].z = 0;
+
+				aimeshes[count_mesh]->mTextureCoords[1][idx_v].x = mesh_.uv_n[idx_v].x;
+				aimeshes[count_mesh]->mTextureCoords[1][idx_v].y = mesh_.uv_n[idx_v].y;
+				aimeshes[count_mesh]->mTextureCoords[1][idx_v].z = 0;
 			}
 
 			size_t nb_faces = mesh_.faces_indexes.size(); 
@@ -347,18 +333,9 @@ void FBXExporter::ExportScene(Scene scene){
 					mat.c.x, mat.c.y, mat.c.z, mat.c.t,
 					mat.d.x, mat.d.y, mat.d.z, mat.d.t);
 				bones[count_bones]->mName = it_b.second.name;
-				//bones[count_bones]->mOffsetMatrix = aiMat;
+				bones[count_bones]->mOffsetMatrix = aiMat.Transpose();
 				bones_ptr[bones[count_bones]->mName.C_Str()].push_back(bones[count_bones]);
-				/*aiVector3t< float> scaling;
-				aiQuaterniont< float > rotation;
-				aiVector3t< float > position;
-				aiMat.Decompose(scaling, rotation, position);
-				std::cout << "position " << position.x << ", " << position.y << ", " << position.z << std::endl;
-				std::cout << "rotation " << rotation.w << ", " << rotation.x << ", " << rotation.y << ", " << rotation.z << std::endl;
-				std::cout << "scaling " << scaling.x << ", " << scaling.y << ", " << scaling.z << std::endl << std::endl;
-
-				std::cout << "inverse bind matrix: " << std::endl;
-				std::cout << mat.to_string() << std::endl;*/
+				
 
 				count_bones++;
 			}
@@ -389,12 +366,8 @@ void FBXExporter::ExportScene(Scene scene){
 		}
 		idx_node++;
 	}
-	
-
-	//now we need to organize them.
 
 	aiNode* rootNode = NULL;
-
 	idx_node = 0;
 	for (idx_node = 0; idx_node < nb_nodes; idx_node++) {
 		aiNode* current_node = aiNodes[idx_node];
@@ -409,52 +382,47 @@ void FBXExporter::ExportScene(Scene scene){
 			map_ptr[children_[i]]->mParent = current_node;
 		}
 	}
-	
-	recur_setting_offset_matrix(rootNode, bones_ptr, aiMatrix4x4());
-	/*
-	for (aiBone* b_ptr : bones_ptr) {
-		aiNode* current_node = map_ptr[b_ptr->mName.C_Str()];
-		aiMatrix4x4 global_transform = current_node->mTransformation;
-		while (current_node->mParent != NULL) {
-			aiMatrix4x4 local_transform = current_node->mParent->mTransformation;
-			/*std::cout << " parent " << current_node->mParent->mName.C_Str() << std::endl;
-			std::string result = "";
-			result = result + std::to_string(local_transform.a1) + ", " + std::to_string(local_transform.a2) + ", " + std::to_string(local_transform.a3) + ", " + std::to_string(local_transform.a4) + "\n";
-			result = result + std::to_string(local_transform.b1) + ", " + std::to_string(local_transform.b2) + ", " + std::to_string(local_transform.b3) + ", " + std::to_string(local_transform.b4) + "\n";
-			result = result + std::to_string(local_transform.c1) + ", " + std::to_string(local_transform.c2) + ", " + std::to_string(local_transform.c3) + ", " + std::to_string(local_transform.c4) + "\n";
-			result = result + std::to_string(local_transform.d1) + ", " + std::to_string(local_transform.d2) + ", " + std::to_string(local_transform.d3) + ", " + std::to_string(local_transform.d4) + "\n";
-			result = result + "\n";
-			std::cout << result << std::endl;
 
-
-			global_transform = local_transform * global_transform;
-			current_node = current_node->mParent;
-
+	//recur_setting_offset_matrix_2(rootNode, scene.meshes, bones_ptr, aiMatrix4x4());
+	idx_node = 0;
+	for (idx_node = 0; idx_node < nb_nodes; idx_node++) {
+		aiNode* current_node = aiNodes[idx_node];
+		std::string current_node_name = current_node->mName.C_Str();
+		if (scene.bones.count(current_node_name) > 0) {
+			std::string bone_name = current_node_name;
+			aiMatrix4x4 inverse_transform;
+			while (true) {
+				inverse_transform = current_node->mTransformation * inverse_transform;
+				current_node = current_node->mParent;
+				if (current_node == NULL) break;
+				current_node_name = current_node->mName.C_Str();
+			}
+			inverse_transform = inverse_transform.Inverse();
+			for (aiBone* current_bone : bones_ptr[bone_name]) {
+				current_bone->mOffsetMatrix = inverse_transform;
+			}
 		}
-		global_transform = global_transform.Inverse();
-		b_ptr->mOffsetMatrix = global_transform;
-		
-	}*/
+			
+	}
+	
 	
 	aiAnimation** animations = new aiAnimation * [scene.anis.size()];
 	unsigned int id_ani = 0;
-	for (auto ani_ : scene.anis) {//mtb.data.size()
+	for (auto ani_ : scene.anis) {
 
 
 		aiAnimation* ani = new aiAnimation;
-		ani->mDuration = ani_.second.duration;
+		ani->mDuration = 100;// ani_.second.duration;
 		ani->mName = ani_.second.name;
-		ani->mTicksPerSecond = ani_.second.ticks_per_second;
-		size_t nb_of_bones_with_ibm = scene.bones.size();
-
-		aiNodeAnim** ani_nodes = new aiNodeAnim * [nb_of_bones_with_ibm];
+		ani->mTicksPerSecond = 24;// ani_.second.ticks_per_second;
+		
+		aiNodeAnim** ani_nodes = new aiNodeAnim * [ani_.second.bones_data.size()];
 
 		unsigned int count_bones_with_ibm = 0;
 		for (auto it_nd : ani_.second.bones_data) {
 			std::string current_bone = it_nd.first;
 			aiNode* current_node = map_ptr[current_bone];
-			//if (scene.bones.count(current_bone) > 0)
-			//{
+			
 				aiNodeAnim* node_ani = new aiNodeAnim();
 
 
@@ -467,68 +435,31 @@ void FBXExporter::ExportScene(Scene scene){
 				aiVector3t< float> scaling;
 				aiQuaterniont< float > rotation;
 				aiVector3t< float > position;
-				//aiMat.Decompose(scaling, rotation, position);
-
-
-				//matrix4 inverse_bind_pose = scene.bones[current_bone]->offset_matrix;
-
+			
 				aiVector3t< float> scaling_bp;
 				aiQuaterniont< float > rotation_bp;
 				aiVector3t< float > position_bp;
-				/*aiMatrix4x4 aiMat_bp = aiMatrix4x4(inverse_bind_pose.a.x, inverse_bind_pose.a.y, inverse_bind_pose.a.z, inverse_bind_pose.a.t,
-					inverse_bind_pose.b.x, inverse_bind_pose.b.y, inverse_bind_pose.b.z, inverse_bind_pose.b.t,
-					inverse_bind_pose.c.x, inverse_bind_pose.c.y, inverse_bind_pose.c.z, inverse_bind_pose.c.t,
-					inverse_bind_pose.d.x, inverse_bind_pose.d.y, inverse_bind_pose.d.z, inverse_bind_pose.d.t);*/
-				
-
-			
-
-				
+						
 				aiMatrix4x4 bind_pos = current_node->mTransformation;
-
 				
-				/*if the parent of the bone is not a part of the bone hierarchy, it seems I need the global transform, I don't know
-				if that is how things are or if I did something wrong, but hopefully it works all the time
-				Actually it doesnt work in dae because the whole hierarchy seemed fucked?
-				
-				*/
-
-				/*if (bones_ptr.count(current_node->mParent->mName.C_Str()) == 0) {
-					aiMatrix4x4 world;
-					GetWorldTransform(rootNode, aiMatrix4x4(), current_bone, world);
-					bind_pos = world;
-				}*/
-
 				bind_pos.Decompose(scaling_bp, rotation_bp, position_bp);
 				
 
-				if (!keys.empty()) {
+			if (!keys.empty()) {
 					double first_key = keys[0].tick;
-					std::ofstream f;
-					f.open("debugkan7.txt", std::ios::app);
-					f << "Name: " << current_bone << std::endl;
-
-					aiMatrix4x4 world;
-					GetWorldTransform(rootNode, aiMatrix4x4(), current_bone, world);
-
 
 					for (auto key : keys) {
 						
-						aiVector3D pos = position_bp;// aiVector3D(key.position.x, key.position.y, key.position.z);
-						aiVector3D scaling = scaling_bp;//aiVector3D(key.scaling.x, key.scaling.y, key.scaling.z);
-						aiQuaternion rotation = rotation_bp;//aiQuaternion(key.rotation.x, key.rotation.y, key.rotation.z, key.rotation.t);
-
-						f << "Time: " << key.tick - first_key << " " << pos.x << ", " << pos.y << ", " << pos.z << std::endl;
-						f << "" << key.tick - first_key << " " << scaling.x << ", " << scaling.y << ", " << scaling.z << std::endl;
-						f << "" << key.tick - first_key << " " << rotation.w << " " << rotation.x << ", " << rotation.y << ", " << rotation.z << std::endl;
-						position_keys.push_back(aiVectorKey(key.tick - first_key, pos));
-						rotation_keys.push_back(aiQuatKey(key.tick - first_key, rotation));
-						scaling_keys.push_back(aiVectorKey(key.tick - first_key, scaling));
-
-
+						aiVector3D pos_key = aiVector3D(key.position.x, key.position.y, key.position.z);
+						aiVector3D scaling_key = aiVector3D(key.scaling.x, key.scaling.y, key.scaling.z);
+						aiQuaternion rotation_key = rotation_bp * aiQuaternion(key.rotation.t, key.rotation.x, key.rotation.y, key.rotation.z);
+						
+						position_keys.push_back(aiVectorKey((float) (key.tick - first_key)/8, pos_key));
+						rotation_keys.push_back(aiQuatKey((float)(key.tick - first_key) /8, rotation_key));
+						scaling_keys.push_back(aiVectorKey((float)(key.tick - first_key) /8, scaling_bp));
 
 					}
-					f.close();
+					
 				}
 				node_ani->mNodeName = current_bone;
 				node_ani->mNumPositionKeys = position_keys.size();
@@ -546,7 +477,7 @@ void FBXExporter::ExportScene(Scene scene){
 
 				ani_nodes[count_bones_with_ibm] = node_ani;
 				count_bones_with_ibm++;
-				//}
+				
 		}
 		if (count_bones_with_ibm > 0) {
 			ani->mChannels = ani_nodes;
@@ -554,51 +485,46 @@ void FBXExporter::ExportScene(Scene scene){
 			animations[id_ani] = ani;
 			id_ani++;
 		}
+		
 
 
 
 	}
 
-
-	aiScene *out = new aiScene();                       // deleted: by us after use
+	aiScene *out = new aiScene();                    
 	out->mNumMeshes = real_nb_of_meshes;
-	out->mMeshes = aimeshes;            // deleted: Version.cpp:151
+	out->mMeshes = aimeshes;           
 	out->mNumMaterials = count_total_material;
-	out->mMaterials = aimaterials; // deleted: Version.cpp:158
+	out->mMaterials = aimaterials;
 	out->mRootNode = rootNode;
-	out->mMetaData = new aiMetadata(); // workaround, issue #3781
+	out->mMetaData = new aiMetadata();
 	out->mAnimations = animations;
-	out->mNumAnimations = 1;
+	out->mNumAnimations = scene.anis.size();
 	// mtb.data.size();
-	// and we're good to go. do whatever:
+	
 
 	Assimp::Exporter exporter;
 	//try{
-	std::cout << "format supported: " << std::endl;
+	/*std::cout << "format supported: " << std::endl;
 	for (unsigned i = 0; i < exporter.GetExportFormatCount(); i++) {
 		const aiExportFormatDesc * desc = exporter.GetExportFormatDescription(i);
 		std::cout << desc->description << " " << desc->id << std::endl;
-	}
-	//exporter.Export(out, "objnomtl", "model.obj");
-	exporter.Export(out, "glb2",  "model.glb");
-	//}
-	//catch (std::exception e) {
-		//std::cout << "FAIL: " << e.what() << std::endl;
-		//}
-	// deleting the scene will also take care of the vertices, faces, meshes, materials, chunks, etc.
+	}*/
+	std::cout << "Writing " << scene.name + "/" + scene.name + ".dae" << std::endl;
+	exporter.Export(out, "collada",  scene.name +"/" + scene.name + ".dae");
 
-	//delete out;
+	delete out;
 
 }
 
 
 
-FBXExporter::FBXExporter()
+DAEExporter::DAEExporter()
 {
 	
 }
 
 
-FBXExporter::~FBXExporter()
+DAEExporter::~DAEExporter()
 {
 }

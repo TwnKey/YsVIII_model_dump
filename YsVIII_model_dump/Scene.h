@@ -12,6 +12,7 @@ public:
 	std::string name;
 	matrix4 transform;
 	std::vector<std::string> children;
+	std::string parent = "";
 	node(std::string name, matrix4 mat) :name(name), transform(mat) {}
 };
 
@@ -39,6 +40,7 @@ struct mesh : node {
 	std::map<std::string, bone> bones;
 	std::vector<vector3<float>> vertices;
 	std::vector<vector2<float>> uv;
+	std::vector<vector2<float>> uv_n;
 	std::vector<vector3<unsigned int>> faces_indexes;
 	unsigned int mat_id;
 	unsigned int mat_variant;
@@ -54,6 +56,9 @@ struct key_frame {
 	vector3<float> position;
 	vector4<float> rotation;
 	vector3<float> scaling;
+	int referentiel_pos; 
+	int referentiel_rot;
+	int referentiel_scl;
 	key_frame(unsigned int tick, vector3<float> p, vector4<float> r, vector3<float> s) : tick(tick), position(p), rotation(r), scaling(s) {}
 };
 struct animation {
@@ -70,12 +75,13 @@ struct animation {
 class Scene
 {
 public:
-	Scene(IT3File it3_p, IT3File it3_m, MTBFile mtb);
+	Scene(std::string name, IT3File it3_p, IT3File it3_m, MTBFile mtb);
 	~Scene() = default;
+	std::string name;
 	std::map<std::string, simple_node> simple_nodes; //node name
 	std::map<std::string, std::vector<mesh>> meshes; //node name
 	std::map<std::string, animation> anis; //animation name
 	std::map<unsigned int, material> mats;
-	std::map<std::string, bone *> bones;
+	std::map<std::string, std::vector<bone *>> bones;
 };
 

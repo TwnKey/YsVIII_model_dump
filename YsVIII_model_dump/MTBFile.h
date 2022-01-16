@@ -17,9 +17,9 @@ class MTBFile
 {
 public:
 	std::vector<motion_data> data;
-
+	std::string name;
 	std::vector<std::string> bones;
-
+	MTBFile() = default;
 	MTBFile(const std::vector<uint8_t>& file_content);
 	~MTBFile() = default;
 
